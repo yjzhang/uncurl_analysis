@@ -1,7 +1,7 @@
 To-implement, in order of easiness:
 
 1. get overexpressed genes for each cluster
-2. more visualization tools - 
+2. more visualization tools - heat maps, gene expression in scatter plot 
 2. uncertainty sampling by cluster assignment entropy
 3. re-labeling/re-initialization of uncurl
     - including cluster merging/splitting
@@ -10,6 +10,7 @@ To-implement, in order of easiness:
     - implement that crazy p-value thing from that one paper?
 5. improved gene selection methods??? bring back robust uncurl???
     - use Poisson test/c-score test on cluster subsets to identify differentiating genes?
+6. hierarchical uncurl
 
 Uncurl question: how many iterations do we actually need???
 
