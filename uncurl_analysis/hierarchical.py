@@ -95,12 +95,17 @@ def hierarchical_uncurl(data, largek, max_depth, **uncurl_params):
     # allocate M and W
     M = np.zeros((data.shape[0], largek))
     W = np.zeros((largek, data.shape[1]))
-    # list of current leaf nodes???
+    # partition
+    current_cell_partitions = []
+    # list of current leaf nodes??? what should they contain?
     current_partitions = []
     data_subsets = [data]
     while len(current_partitions) < largek:
         data_ = data_subsets.pop()
-        m_, w_ = uncurl.poisson_estimate_state(data_, 2, **uncurl_params)
+        m, w = uncurl.poisson_estimate_state(data_, 2, **uncurl_params)
+        labels = w.argmax(0)
+        data_subset0 = data_[labels==0]
+        data_subset1 = data_[labels==1]
     return M, W
 
 def run_partition(data, smallk, largek, method, max_depth):
