@@ -46,7 +46,10 @@ def rank_correlation(bulk_dataset, cell):
 def pearson_correlation(bulk_dataset, cell):
     return pearsonr(bulk_dataset, cell)[0]
 
-def correlation_lookup(datasets, cell, method='poisson'):
+def cosine(bulk_dataset, cell):
+    pass
+
+def bulk_lookup(datasets, cell, method='poisson'):
     """
     Returns a list of (dataset, value) pairs sorted by descending value,
     where value indicates similarity between the cell and the dataset.

@@ -83,6 +83,7 @@ def split_cluster_cells(data, m_old, w_old, cluster_to_split, **uncurl_params):
 
     Returns: M_new, W_new
     """
+    # TODO
     k = m_old.shape[1]
     k += 1
     labels = w_old.argmax(0)
@@ -91,6 +92,7 @@ def split_cluster_cells(data, m_old, w_old, cluster_to_split, **uncurl_params):
     #cell_subset = (labels==cluster_to_split)
     cell_others = ~cell_subset
     data_subset = data[cell_subset, :]
+    # TODO: initialization???
     m_sub, w_sub, ll_new = uncurl.run_state_estimation(data_subset,
             clusters=2,
             **uncurl_params)
@@ -117,6 +119,7 @@ def merge_clusters(data, m_old, w_old, clusters_to_merge, **uncurl_params):
 
     Returns: M_new, W_new
     """
+    # TODO
     k = m_old.shape[1]
     m_new, w_new, ll_new = uncurl.run_state_estimation(data,
             clusters=k,

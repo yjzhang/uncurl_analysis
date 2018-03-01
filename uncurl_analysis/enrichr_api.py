@@ -6,11 +6,14 @@ import json
 import requests
 
 ENRICHR_URL = 'http://amp.pharm.mssm.edu/Enrichr/'
+
+# somewhat arbitrary list of enrichr libraries, that may be helpful
+# for identifying cell types.
 ENRICHR_LIBRARIES = [
         'Human_Gene_Atlas',
         'Mouse_Gene_Atlas',
         'Allen_Brain_Atlas_up',
-        'GTEx_Tissue_Sample_Gene_Expression_Profiles_up',
+#        'GTEx_Tissue_Sample_Gene_Expression_Profiles_up',
         'ARCHS4_Tissues',
         'ARCHS4_Cell-lines',
         'GO_Biological_Process_2017b',
@@ -36,8 +39,8 @@ def enrichr_add_list(gene_list, description=''):
         raise Exception('Error analyzing gene list')
     data = json.loads(response.text)
     user_list_id = data['userListId']
-    short_id = data['shortId']
-    print(data)
+    #short_id = data['shortId']
+    #print(data)
     return user_list_id
 
 def enrichr_query(user_list_id,
@@ -58,5 +61,5 @@ def enrichr_query(user_list_id,
     if not response.ok:
         raise Exception('Error fetching enrichment results')
     data = json.loads(response.text)
-    print(data)
+    #print(data)
     return data[gene_set_library]
