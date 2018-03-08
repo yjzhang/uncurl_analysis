@@ -29,6 +29,17 @@ class BulkLookupTest(TestCase):
         nmi_val = nmi(self.labs, labels)
         self.assertTrue(nmi_val > 0.99)
 
+    def testSparsePoissonLookup(self):
+        data = self.data
+        labels = []
+        for i in range(data.shape[1]):
+            cell = data[:,i]
+            scores = bulk_lookup(self.bulk_means, cell)
+            labels.append(scores[0][0])
+        nmi_val = nmi(self.labs, labels)
+        self.assertTrue(nmi_val > 0.99)
+
+
     def testCosineLookup(self):
         data_dense = self.data_dense
         labels = []

@@ -25,10 +25,13 @@
 # alternatively, we can convert cell to a distribution and calculate divergence (but what about presence of zeros? do we just take the nonzeros?
 
 import numpy as np
+from scipy import sparse
 
 from scipy.special import xlogy, gammaln
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics.pairwise import cosine_similarity
+
+from uncurl_analysis.sparse_bulk_data import csc_log_prob_poisson_no_norm
 
 # TODO: have a sparse, efficient way of calculating these metrics?
 def log_prob_poisson(bulk_data, cell, use_norm=False, eps=1e-10):
@@ -44,6 +47,14 @@ def log_prob_poisson(bulk_data, cell, use_norm=False, eps=1e-10):
     """
     cell_read_count = cell.sum()
     b = bulk_data*cell_read_count + eps
+    if sparse.issparse(cell) and not use_norm:
+        cell_csc = sparse.csc_matrix(cell).astype(float)
+        return csc_log_prob_poisson_no_norm(
+                cell_csc.data,
+                cell_csc.indices,
+                cell_csc.indptr,
+                b,
+                eps)
     # prob = bulk^cell*e^(-bulk)/cell!
     # log_prob = cell*log(bulk) - bulk - log(cell!)
     if use_norm:
