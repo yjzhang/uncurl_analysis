@@ -40,6 +40,9 @@ def csc_overexpressed_genes(np.ndarray[numeric, ndim=1] data,
     """
     Find overexpressed genes given a csc matrix...
     """
+    cdef numeric[:] data_ = data
+    cdef int2[:] indices_ = indices
+    cdef int2[:] indptr_ = indptr
     if eps==0:
         eps = 10.0/cells
     cdef int2 g, c, start_ind, end_ind, i2
@@ -54,18 +57,18 @@ def csc_overexpressed_genes(np.ndarray[numeric, ndim=1] data,
     for c in range(cells):
         k = labels[c]
         cluster_cell_counts[k] += 1
-        start_ind = indptr[c]
-        end_ind = indptr[c+1]
+        start_ind = indptr_[c]
+        end_ind = indptr_[c+1]
         for i2 in range(start_ind, end_ind):
-            g = indices[i2]
-            cluster_means[g,k] += data[i2]
+            g = indices_[i2]
+            cluster_means[g, k] += data_[i2]
     for g in range(genes):
         for k in range(K):
-            cluster_means[g,k] = cluster_means[g,k]/cluster_cell_counts[k]
+            cluster_means[g, k] = cluster_means[g, k]/cluster_cell_counts[k]
     cdef double max_k, max_k2
     for g in range(genes):
         for k in range(K):
-            max_k = cluster_means[g,k] + eps
+            max_k = cluster_means[g, k] + eps
             max_k2 = 0
             for k2 in range(K):
                 if k2 != k:

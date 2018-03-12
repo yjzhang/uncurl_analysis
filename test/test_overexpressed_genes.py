@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from uncurl_analysis.gene_extraction import find_overexpressed_genes, find_overexpressed_genes_m
+from uncurl_analysis.gene_extraction import find_overexpressed_genes, find_overexpressed_genes_m, generate_permutations, calculate_permutation_pval
 
 from scipy import sparse
 from scipy.io import loadmat
@@ -9,6 +9,8 @@ import numpy as np
 class OverexpressedGenesTest(TestCase):
 
     def setUp(self):
+        # TODO: generate synthetic datasets for testing,
+        # where top cluster-specific genes are known
         dat = loadmat('data/10x_pooled_400.mat')
         self.data = sparse.csc_matrix(dat['data'])
         self.labs = dat['labels'].flatten()
@@ -26,7 +28,20 @@ class OverexpressedGenesTest(TestCase):
             s2 = np.array([x[1] for x in scores_sparse[k]])
             s1_genes = [x[0] for x in scores[k]]
             s2_genes = [x[0] for x in scores_sparse[k]]
-            print(s1_genes[:10])
-            print(s2_genes[:10])
             self.assertTrue(np.sqrt(((s1-s2)**2).sum()) < 1e-4)
             self.assertEqual(s1_genes, s2_genes)
+
+    def testPermutationTest(self):
+        scores_sparse = find_overexpressed_genes(self.data, self.labs)
+        perms = generate_permutations(self.data, len(set(self.labs)),
+                n_perms=100)
+        for k in set(self.labs):
+            scores_k = scores_sparse[k]
+            print(k)
+            for gene_id, score in scores_k:
+                if score <= 1.0:
+                    break
+                baseline = perms[gene_id]
+                pval = calculate_permutation_pval(score, baseline)
+                print(gene_id, pval)
+                self.assertTrue(pval <= 1.0 and pval >= 0.0)

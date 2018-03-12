@@ -77,3 +77,38 @@ def find_overexpressed_genes_m(m, eps=0):
     for k in range(K):
         scores[k].sort(key=lambda x: x[1], reverse=True)
     return scores
+
+def generate_permutations(data, k, n_perms=100):
+    """
+    Generates c-score distributions for each gene by randomly assigning cells
+    to clusters and then calculating c-scores.
+
+    Returns:
+        A dict of {gene_id : [sorted (ascending) list of c-scores]}
+    """
+    gene_c_scores = {g:[] for g in range(data.shape[0])}
+    for perm in range(n_perms):
+        clusters = np.random.randint(0, k, data.shape[1])
+        c_scores = find_overexpressed_genes(data, clusters)
+        # for every gene, there should be at least one cluster for which
+        # it has a c-score of at least 1.0.
+        for c in range(k):
+            cluster_scores = c_scores[c]
+            for gene_id, cs in cluster_scores:
+                if cs > 1.0:
+                    gene_c_scores[gene_id].append(cs)
+                else:
+                    break
+    for g in range(data.shape[0]):
+        gene_c_scores[g].sort()
+    return gene_c_scores
+
+def calculate_permutation_pval(v, scores):
+    """
+    Given a sorted list of scores and a value, this calculates the value's position in the list of scores, and returns 1 - location(v)/len(scores).
+    """
+    # could binary search this
+    for i, s in enumerate(scores):
+        if s >= v:
+            break
+    return 1.0 - float(i)/len(scores)
