@@ -107,8 +107,36 @@ def calculate_permutation_pval(v, scores):
     """
     Given a sorted list of scores and a value, this calculates the value's position in the list of scores, and returns 1 - location(v)/len(scores).
     """
-    # could binary search this
+    # could binary search this but it's probably not worth it
+    position = -1
     for i, s in enumerate(scores):
         if s >= v:
             break
-    return 1.0 - float(i)/len(scores)
+        position = i
+    return 1.0 - float(position+1)/len(scores)
+
+def c_scores_to_pvals(scores, permutations):
+    """
+    Converts a dict of c-scores (output of find_overexpressed_genes) to a dict of
+    p-values using the output of the permutation test.
+
+    Args:
+        scores: output of find_overexpressed_genes
+        permutations: output of generate_permutations
+
+    Returns:
+        dict of k : list of (gene_id, pval) sorted by ascending pval
+    """
+    pvals = {}
+    for k, sc in scores.items():
+        pvals[k] = []
+        for gene_id, c_score in sc:
+            perms = permutations[gene_id]
+            pval = 1.0
+            if len(perms) > 1:
+                pval = calculate_permutation_pval(c_score, perms)
+            pvals[k].append((gene_id, pval))
+        pvals[k].sort(key=lambda x: x[1])
+    return pvals
+
+

@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from uncurl_analysis.gene_extraction import find_overexpressed_genes, find_overexpressed_genes_m, generate_permutations, calculate_permutation_pval
+from uncurl_analysis.gene_extraction import find_overexpressed_genes, find_overexpressed_genes_m, generate_permutations, calculate_permutation_pval, c_scores_to_pvals
 
 from scipy import sparse
 from scipy.io import loadmat
@@ -35,6 +35,7 @@ class OverexpressedGenesTest(TestCase):
         scores_sparse = find_overexpressed_genes(self.data, self.labs)
         perms = generate_permutations(self.data, len(set(self.labs)),
                 n_perms=100)
+        pvals = c_scores_to_pvals(scores_sparse, perms)
         for k in set(self.labs):
             scores_k = scores_sparse[k]
             print(k)
