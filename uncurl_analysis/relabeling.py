@@ -7,6 +7,7 @@
 import numpy as np
 
 import uncurl
+from uncurl import state_estimation
 
 from . import entropy
 
@@ -49,81 +50,78 @@ def split_cluster(data, m_old, w_old, cluster_to_split, **uncurl_params):
 
     Returns: M_new, W_new
     """
-    k = m_old.shape[1]
-    k += 1
-    new_m_col = m_old[:,cluster_to_split]
-    new_m_col += new_m_col*np.random.random(m_old.shape[1])
-    new_m_col = new_m_col.reshape((m_old.shape[0],1))
-    m_old = np.hstack([m_old[:,:cluster_to_split],
-                       new_m_col,
-                       m_old[:,cluster_to_split:]])
-    new_w_row = w_old[cluster_to_split,:]
-    w_old = np.vstack([w_old[:cluster_to_split,:],
-                       new_w_row,
-                       w_old[cluster_to_split:,:]])
-    m_new, w_new, ll_new = uncurl.run_state_estimation(data,
-            clusters=k,
-            init_means=m_old,
-            init_weights=w_old,
-            **uncurl_params)
-    return m_new, w_new
-
-def split_cluster_cells(data, m_old, w_old, cluster_to_split, **uncurl_params):
-    """
-    Splits a given cluster, returning the results of an uncurl re-initialization.
-
-    Unlike split_cluster, this only runs uncurl on the subset of cells that are assigned to the given cluster.
-
-    Args:
-        data (array): genes x cells
-        m_old (array): genes x k
-        w_old (array): k x cells
-        cluster_to_split (int): cluster id to split on
-        **uncurl_params: optional kwargs to pass to uncurl
-
-    Returns: M_new, W_new
-    """
     # TODO
     k = m_old.shape[1]
     k += 1
     labels = w_old.argmax(0)
-    sorted_labels = w_old.argsort(0)
-    cell_subset = (sorted_labels[0,:]==cluster_to_split) or (sorted_labels[1,:]==cluster_to_split)
-    #cell_subset = (labels==cluster_to_split)
-    cell_others = ~cell_subset
-    data_subset = data[cell_subset, :]
-    # TODO: initialization???
-    m_sub, w_sub, ll_new = uncurl.run_state_estimation(data_subset,
-            clusters=2,
+    cell_subset = (labels==cluster_to_split)
+    # or (sorted_labels[1,:]==cluster_to_split)
+    # TODO: initialization??? run km++ or poisson cluster on the cell subset?
+    data_subset = data[:,cell_subset]
+    new_m, new_w = state_estimation.initialize_means_weights(data_subset, 2,
+            max_assign_weight=0.75)
+    m_init = np.hstack([m_old[:, :cluster_to_split],
+                       new_m,
+                       m_old[:, cluster_to_split+1:]])
+    # extend new_w to encompass all cells
+    new_w_2 = np.zeros((2, w_old.shape[1]))
+    new_w_2[0,:] = w_old[cluster_to_split]/2
+    new_w_2[1,:] = w_old[cluster_to_split]/2
+    new_w_2[:,cell_subset] = new_w
+    w_init = np.vstack([w_old[:cluster_to_split, :],
+                       new_w_2,
+                       w_old[cluster_to_split+1:, :]])
+    w_init = w_init/w_init.sum(0)
+    m_new, w_new, ll_new = uncurl.run_state_estimation(data,
+            clusters=k,
+            init_means=m_init,
+            init_weights=w_init,
             **uncurl_params)
-    m_new = np.zeros((m_old.shape[0], m_old.shape[1]+1))
-    w_new = np.zeros((w_old.shape[0]+1, w_old.shape[1]))
-    m_new[:,:cluster_to_split] = m_old[:,:cluster_to_split]
-    m_new[:,cluster_to_split:cluster_to_split+2] = m_sub
-    m_new[:,cluster_to_split+1:] = m_old[:,cluster_to_split+1:]
-    w_new[:cluster_to_split,:] = w_old[:cluster_to_split,:]
-    w_new[cluster_to_split:cluster_to_split+2, cell_subset] = w_sub/w_old[:, cell_subset]
-    w_new[cluster_to_split+1:,:] = w_old[cluster_to_split+1:,:]
     return m_new, w_new
 
-def merge_clusters(data, m_old, w_old, clusters_to_merge, **uncurl_params):
+def merge_clusters(data, m_old, w_old, clusters_to_merge,
+        rerun_uncurl=True, **uncurl_params):
     """
     Merges a given list of clusters, returning the results of an uncurl re-initialization.
+
+    Merging is done by averaging m_old over the clusters to be merged,
+    and summing over w_old (and re-normalizing).
 
     Args:
         data (array): genes x cells
         m_old (array): genes x k
         w_old (array): k x cells
         clusters_to_merge (list): list of cluster ids to merge
+        rerun_uncurl (boolean): if True, re-runs uncurl with a new initialization.
+            If false, this just returns the merged cluster matrix.
         **uncurl_params: optional kwargs to pass to uncurl
 
     Returns: M_new, W_new
     """
-    # TODO
-    k = m_old.shape[1]
+    k = m_old.shape[1] - 1
+    m_init_new_col = np.zeros(m_old.shape[0])
+    w_init_new_row = np.zeros(w_old.shape[1])
+    clusters_to_remove = np.array([True for i in range(k+1)])
+    clusters_to_remove[list(clusters_to_merge)] = False
+    m_init = m_old[:,clusters_to_remove]
+    w_init = w_old[clusters_to_remove,:]
+    for c in clusters_to_merge:
+        m_init_new_col += m_old[:,c]
+        w_init_new_row += w_old[c,:]
+    m_init_new_col = m_init_new_col/len(clusters_to_merge)
+    m_init_new_col = m_init_new_col.reshape((m_old.shape[0],1))
+    w_init_new_row = w_init_new_row.reshape((1, w_old.shape[1]))
+    m_init = np.hstack([m_init[:, 0:clusters_to_merge[0]],
+                        m_init_new_col,
+                        m_init[:, clusters_to_merge[0]:]])
+    w_init = np.vstack([w_init[0:clusters_to_merge[0], :],
+                        w_init_new_row,
+                        w_init[clusters_to_merge[0]:, :]])
+    w_init = w_init/w_init.sum(0)
     m_new, w_new, ll_new = uncurl.run_state_estimation(data,
             clusters=k,
-            init_means=m_old,
-            init_weights=w_old,
+            init_means=m_init,
+            init_weights=w_init,
             **uncurl_params)
     return m_new, w_new
+
