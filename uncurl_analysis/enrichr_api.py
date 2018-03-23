@@ -19,6 +19,9 @@ ENRICHR_LIBRARIES = [
         'GO_Biological_Process_2017b',
         'GO_Cellular_Component_2017b',
         'GO_Molecular_Function_2017b',
+        'Jensen_COMPARTMENTS',
+        'Jensen_DISEASES',
+        'Jensen_TISSUES',
         ]
 
 def enrichr_add_list(gene_list, description=''):
