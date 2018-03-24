@@ -10,6 +10,13 @@ def find_overexpressed_genes(data, labels, eps=0):
     """
     Returns a dict of label : list of (gene id, score) pairs for all genes,
     sorted by descending score.
+
+    Args:
+        data (array): dense or sparse array of shape genes x cells
+        labels (array): 1d array of ints
+
+    Returns:
+        scores - dict of {label : [(gene_id, score) sorted by descending score]}
     """
     genes = data.shape[0]
     cells = data.shape[1]
@@ -78,17 +85,27 @@ def find_overexpressed_genes_m(m, eps=0):
         scores[k].sort(key=lambda x: x[1], reverse=True)
     return scores
 
-def generate_permutations(data, k, n_perms=100):
+def generate_permutations(data, k, real_clusters=None, n_perms=100):
     """
     Generates c-score distributions for each gene by randomly assigning cells
     to clusters and then calculating c-scores.
+
+    Args:
+        data (array): dense or sparse matrix of shape genes x cells
+        k (int): number of clusters
+        real_clusters (array, optional): real clusters to permute. If None, clusters will be randomly assigned based on k. Default: None
+        n_perms (int): number of permutations to use
 
     Returns:
         A dict of {gene_id : [sorted (ascending) list of c-scores]}
     """
     gene_c_scores = {g:[] for g in range(data.shape[0])}
+    # TODO permutations should be of the same shape as the input data (same number of cells?)
     for perm in range(n_perms):
         clusters = np.random.randint(0, k, data.shape[1])
+        if real_clusters is not None:
+            clusters = real_clusters.copy()
+            np.random.shuffle(clusters)
         c_scores = find_overexpressed_genes(data, clusters)
         # for every gene, there should be at least one cluster for which
         # it has a c-score of at least 1.0.
@@ -136,6 +153,7 @@ def c_scores_to_pvals(scores, permutations):
             if len(perms) > 1:
                 pval = calculate_permutation_pval(c_score, perms)
             pvals[k].append((gene_id, pval))
+        # this is a stable sort so it should preserve the c-score ordering?
         pvals[k].sort(key=lambda x: x[1])
     return pvals
 
