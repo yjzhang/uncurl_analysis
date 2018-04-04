@@ -50,13 +50,11 @@ def split_cluster(data, m_old, w_old, cluster_to_split, **uncurl_params):
 
     Returns: M_new, W_new
     """
-    # TODO
     k = m_old.shape[1]
     k += 1
     labels = w_old.argmax(0)
     cell_subset = (labels==cluster_to_split)
     # or (sorted_labels[1,:]==cluster_to_split)
-    # TODO: initialization??? run km++ or poisson cluster on the cell subset?
     data_subset = data[:,cell_subset]
     new_m, new_w = state_estimation.initialize_means_weights(data_subset, 2,
             max_assign_weight=0.75)
@@ -124,4 +122,23 @@ def merge_clusters(data, m_old, w_old, clusters_to_merge,
             init_weights=w_init,
             **uncurl_params)
     return m_new, w_new
+
+def delete_cluster(data, m_old, w_old, cluster_to_delete, **uncurl_params):
+    """
+    Removes a cluster from the data.
+    """
+    k = m_old.shape[1] - 1
+    m_init = np.hstack([m_old[:, :cluster_to_delete], m_old[:, cluster_to_delete+1:]])
+    w_init = np.vstack([w_old[:cluster_to_delete, :], w_old[cluster_to_delete+1:, :]])
+    w_init = w_init/w_init.sum(0)
+    labels = w_old.argmax(0)
+    cells_to_include = (labels != cluster_to_delete)
+    data_subset = data[:, cells_to_include]
+    w_init = w_init[:, cells_to_include]
+    m_new, w_new, ll_new = uncurl.run_state_estimation(data_subset,
+            clusters=k,
+            init_means=m_init,
+            init_weights=w_init,
+            **uncurl_params)
+    return m_new, w_new, cells_to_include
 
