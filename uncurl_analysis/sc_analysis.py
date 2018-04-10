@@ -4,6 +4,7 @@ import pickle
 
 import numpy as np
 import scipy.io
+from scipy import sparse
 import uncurl
 from uncurl.sparse_utils import symmetric_kld
 
@@ -30,7 +31,7 @@ class SCAnalysis(object):
             cell_frac=1.0,
             dim_red_option='mds',
             baseline_dim_red='none',
-            uncurl_kwargs={}):
+            **uncurl_kwargs):
         """
         Args:
             data_dir (str): directory where data is stored
@@ -59,7 +60,7 @@ class SCAnalysis(object):
         self.uncurl_kwargs = uncurl_kwargs
 
         self.w_f = os.path.join(data_dir, 'w.txt')
-        self.has_w = os.path.exists(self.gene_subset_f)
+        self.has_w = os.path.exists(self.w_f)
         self._w = None
 
         self.w_sampled_f = os.path.join(data_dir, 'w_sampled.txt')
@@ -67,11 +68,11 @@ class SCAnalysis(object):
         self._w_sampled = None
 
         self.m_f = os.path.join(data_dir, 'm.txt')
-        self.has_m = os.path.exists(self.gene_subset_f)
+        self.has_m = os.path.exists(self.m_f)
         self._m = None
 
         self.cell_subset_f = os.path.join(data_dir, 'cells_subset.txt')
-        self.has_cell_subset = os.path.exists(self.gene_subset_f)
+        self.has_cell_subset = os.path.exists(self.cell_subset_f)
         self._cell_subset = None
 
         self.cell_frac = cell_frac
@@ -114,6 +115,7 @@ class SCAnalysis(object):
             try:
                 if self.is_sparse:
                     self._data = scipy.io.mmread(self.data_f)
+                    self._data = sparse.csc_matrix(self._data)
                 else:
                     self._data = np.loadtxt(self.data_f)
                 return self._data
@@ -132,7 +134,7 @@ class SCAnalysis(object):
                 data = self.data
                 gene_subset = uncurl.max_variance_genes(data, nbins=5,
                         frac=self.frac)
-                np.savetxt(self.gene_subset_f, gene_subset)
+                np.savetxt(self.gene_subset_f, gene_subset, fmt='%d')
                 self.has_gene_subset = True
             else:
                 gene_subset = np.loadtxt(self.gene_subset_f, dtype=int)
@@ -151,7 +153,7 @@ class SCAnalysis(object):
                 data = self.data
                 read_counts = np.array(data.sum(0)).flatten()
                 cell_subset = (read_counts >= self.min_reads) & (read_counts <= self.max_reads)
-                np.savetxt(self.cell_subset_f, cell_subset)
+                np.savetxt(self.cell_subset_f, cell_subset, fmt='%d')
                 self.has_cell_subset = True
             else:
                 cell_subset = np.loadtxt(self.cell_subset_f, dtype=bool)
@@ -165,6 +167,7 @@ class SCAnalysis(object):
         """
         Data before gene/cell filters, but normalized.
         """
+        # TODO
 
     @property
     def data_subset(self):
@@ -266,7 +269,7 @@ class SCAnalysis(object):
                     n_samples = int(cells*self.cell_frac)
                     samples = simplex_sample.sample(k, n_samples)
                     indices = simplex_sample.data_sample(self.w, samples)
-                    np.savetxt(self.cell_sample_f, indices)
+                    np.savetxt(self.cell_sample_f, indices, fmt='%d')
                     self.has_cell_sample = True
                     self._cell_sample = indices
         return self._cell_sample
@@ -413,6 +416,8 @@ class SCAnalysis(object):
         # set w_sampled
         self._w_sampled = w_new
         np.savetxt(self.w_sampled_f, w_new)
+        self._m = m_new
+        np.savetxt(self.m_f, m_new)
         self.has_w_sampled = True
 
 

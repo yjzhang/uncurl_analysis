@@ -102,14 +102,16 @@ def generate_permutations(data, k, real_clusters=None, n_perms=100):
     gene_c_scores = {g:[] for g in range(data.shape[0])}
     # TODO permutations should be of the same shape as the input data (same number of cells?)
     for perm in range(n_perms):
+        clusters_set = range(k)
         clusters = np.random.randint(0, k, data.shape[1])
         if real_clusters is not None:
+            clusters_set = set(real_clusters)
             clusters = real_clusters.copy()
             np.random.shuffle(clusters)
         c_scores = find_overexpressed_genes(data, clusters)
         # for every gene, there should be at least one cluster for which
         # it has a c-score of at least 1.0.
-        for c in range(k):
+        for c in clusters_set:
             cluster_scores = c_scores[c]
             for gene_id, cs in cluster_scores:
                 if cs > 1.0:
