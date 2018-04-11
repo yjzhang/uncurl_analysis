@@ -65,9 +65,14 @@ class SCAnalysisTest(TestCase):
                 clusters=8,
                 data_filename='data.mtx',
                 baseline_dim_red='tsvd',
+                normalize=True,
+                min_reads=500,
+                max_reads=4000,
                 cell_frac=0.2,
                 max_iters=20,
                 inner_max_iters=20)
+        self.assertEqual(sca.cell_subset.shape[0], 400)
+        print(sca.data_subset.shape)
         sca.run_full_analysis()
         self.assertTrue(sca.has_dim_red)
         self.assertTrue(sca.has_pvals)

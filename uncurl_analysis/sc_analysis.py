@@ -148,19 +148,18 @@ class SCAnalysis(object):
         """
         Gene subset (from max_variance_genes)
         """
-        if self._cell_subset is None:
-            if not self.has_cell_subset:
-                data = self.data_normalized
+        if self._gene_subset is None:
+            if not self.has_gene_subset:
+                data = self.data_normalized[:, self.cell_subset]
                 gene_subset = uncurl.max_variance_genes(data, nbins=5,
                         frac=self.frac)
+                gene_subset = np.array(gene_subset)
                 np.savetxt(self.gene_subset_f, gene_subset, fmt='%d')
                 self.has_gene_subset = True
             else:
                 gene_subset = np.loadtxt(self.gene_subset_f, dtype=int)
             self._gene_subset = gene_subset
-            return gene_subset
-        else:
-            return self._gene_subset
+        return self._gene_subset
 
     @property
     def cell_subset(self):
@@ -171,15 +170,12 @@ class SCAnalysis(object):
             if not self.has_cell_subset:
                 data = self.data
                 read_counts = np.array(data.sum(0)).flatten()
-                cell_subset = (read_counts >= self.min_reads) & (read_counts <= self.max_reads)
-                np.savetxt(self.cell_subset_f, cell_subset, fmt='%d')
+                self._cell_subset = (read_counts >= self.min_reads) & (read_counts <= self.max_reads)
+                np.savetxt(self.cell_subset_f, self._cell_subset, fmt='%s')
                 self.has_cell_subset = True
             else:
-                cell_subset = np.loadtxt(self.cell_subset_f, dtype=bool)
-            self._cell_subset = cell_subset
-            return cell_subset
-        else:
-            return self._cell_subset
+                self._cell_subset = np.loadtxt(self.cell_subset_f, dtype=bool)
+        return self._cell_subset
 
     @property
     def data_normalized(self):
@@ -200,9 +196,7 @@ class SCAnalysis(object):
         """
         if self._data_subset is None:
             data = self.data_normalized
-            data_subset = data[self.gene_subset, :]
-            data_subset = data_subset[:, self.cell_subset]
-            self._data_subset = data_subset
+            self._data_subset = data[np.ix_(self.gene_subset, self.cell_subset)]
         return self._data_subset
 
 
