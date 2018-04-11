@@ -50,6 +50,7 @@ class RelabelingTest(TestCase):
         nmi_split = nmi(labels, w_split.argmax(0))
         print('nmi after splitting the largest cluster: ' + str(nmi_split))
         self.assertTrue(nmi_split >= nmi_base - 0.01)
+        self.assertEqual(w_split.shape[0], w.shape[0] + 1)
 
     def test_merge(self):
         # create distance matrix
@@ -73,3 +74,4 @@ class RelabelingTest(TestCase):
         nmi_merge = nmi(self.labels, w_merge.argmax(0))
         print('nmi after merging the closest pairs: ' + str(nmi_merge))
         self.assertTrue(nmi_merge >= 0.7)
+        self.assertEqual(w_merge.shape[0], w.shape[0] - 1)

@@ -2,7 +2,6 @@ cython
 numpy
 scipy
 scikit-learn
-matplotlib
 requests
 uncurl-seq
 git+git://github.com/yjzhang/simplex_sample.git

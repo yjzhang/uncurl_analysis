@@ -77,6 +77,14 @@ class SCAnalysis(object):
         self.has_m = os.path.exists(self.m_f)
         self._m = None
 
+        self.m_sampled_f = os.path.join(data_dir, 'm_sampled.txt')
+        self.has_m_sampled = os.path.exists(self.m_sampled_f)
+        self._m_sampled = None
+
+        self.gene_subset_sampled_f = os.path.join(data_dir, 'gene_subset_sampled.txt')
+        self.has_gene_subset_sampled = os.path.exists(self.gene_subset_sampled_f)
+        self._gene_subset_sampled = None
+
         self.cell_subset_f = os.path.join(data_dir, 'cells_subset.txt')
         self.has_cell_subset = os.path.exists(self.cell_subset_f)
         self._cell_subset = None
@@ -257,6 +265,15 @@ class SCAnalysis(object):
             return self._w_sampled
 
     @property
+    def m_sampled(self):
+        if not self.has_m_sampled:
+            return self.m[self.gene_subset_sampled, :]
+        else:
+            if self._m_sampled is None:
+                self._m_sampled = np.loadtxt(self.m_sampled_f)
+            return self._m_sampled
+
+    @property
     def labels(self):
         if not self.has_labels:
             self._labels = self.w.argmax(0)
@@ -276,7 +293,8 @@ class SCAnalysis(object):
             if self.has_mds_means:
                 self._mds_means = np.loadtxt(self.mds_means_f)
             else:
-                self._mds_means = uncurl.dim_reduce(self.m, self.w, 2).T
+                self._mds_means = uncurl.dim_reduce(self.m_sampled,
+                        self.w_sampled, 2).T
                 np.savetxt(self.mds_means_f, self._mds_means)
                 self.has_mds_means = True
         return self._mds_means
@@ -296,11 +314,26 @@ class SCAnalysis(object):
                     k, cells = self.w.shape
                     n_samples = int(cells*self.cell_frac)
                     samples = simplex_sample.sample(k, n_samples)
-                    indices = simplex_sample.data_sample(self.w, samples)
+                    indices = simplex_sample.data_sample(self.w, samples,
+                            replace=False)
                     np.savetxt(self.cell_sample_f, indices, fmt='%d')
                     self.has_cell_sample = True
                     self._cell_sample = indices
+
         return self._cell_sample
+
+    @property
+    def gene_subset_sampled(self):
+        if self._gene_subset_sampled is None:
+            if not self.has_gene_subset_sampled:
+                data_sampled = self.data_subset[:, self.cell_sample]
+                gene_subset_sampled = uncurl.max_variance_genes(data_sampled, 1, 1)
+                self._gene_subset_sampled = gene_subset_sampled
+                np.savetxt(self.gene_subset_sampled_f, gene_subset_sampled, fmt='%d')
+                self.has_gene_subset_sampled = True
+            else:
+                self._gene_subset_sampled = np.loadtxt(self.gene_subset_sampled_f, dtype=int)
+        return self._gene_subset_sampled
 
     @property
     def data_sampled(self):
@@ -309,7 +342,7 @@ class SCAnalysis(object):
         """
         data_subset = self.data_subset
         cell_sample = self.cell_sample
-        return data_subset[:, cell_sample]
+        return data_subset[np.ix_(self.gene_subset_sampled, cell_sample)]
 
     @property
     def baseline_vis(self):
@@ -355,7 +388,7 @@ class SCAnalysis(object):
             else:
                 w = self.w_sampled
                 if self.dim_red_option == 'mds':
-                    self._dim_red = uncurl.mds(self.m, w, 2)
+                    self._dim_red = uncurl.mds(self.m_sampled, w, 2)
                 elif self.dim_red_option == 'tsne':
                     tsne = TSNE(2, metric=symmetric_kld)
                     self._dim_red = tsne.fit_transform(w.T).T
@@ -424,7 +457,9 @@ class SCAnalysis(object):
         self._gene_names = None
         self._gene_subset = None
         self._w = None
+        self._w_sampled = None
         self._m = None
+        self._m_sampled = None
         self._cell_subset = None
         self._baseline_vis = None
         self._dim_red = None
@@ -440,9 +475,8 @@ class SCAnalysis(object):
         Runs split or merge
         """
         data_sampled = self.data_sampled
-        m_new = self.m
+        m_new = self.m_sampled
         w_new = self.w_sampled
-        print(w_new.shape)
         if split_or_merge == 'split':
             self.clusters += 1
             c = clusters_to_change[0]
@@ -453,14 +487,12 @@ class SCAnalysis(object):
             m_new, w_new = relabeling.merge_clusters(data_sampled, m_new, w_new,
                     clusters_to_change, **self.uncurl_kwargs)
         # set w_sampled
-        print(w_new.shape)
-        print(m_new.shape)
         self._w_sampled = w_new
         np.savetxt(self.w_sampled_f, w_new)
-        self._m = m_new
-        np.savetxt(self.m_f, m_new)
+        self._m_sampled = m_new
+        np.savetxt(self.m_sampled_f, m_new)
         self.has_w_sampled = True
-
+        self.has_m_sampled = True
 
     def run_full_analysis(self):
         """

@@ -100,7 +100,7 @@ class SCAnalysisTest(TestCase):
                 clusters=8,
                 data_filename='data.mtx',
                 baseline_dim_red='tsvd',
-                cell_frac=0.9,
+                cell_frac=1.0,
                 max_iters=20,
                 inner_max_iters=10)
         sca.run_full_analysis()

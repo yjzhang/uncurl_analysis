@@ -13,6 +13,15 @@ extensions = [
              extra_compile_args=['-O3', '-ffast-math']),
 ]
 
+install_requires = [
+        'uncurl-seq',
+        'cython',
+        'numpy',
+        'scipy',
+        'scikit-learn',
+        'requests',
+]
+
 
 setup(
     name='uncurl-analysis',
@@ -23,6 +32,7 @@ setup(
     license='MIT',
     include_dirs=[numpy.get_include()],
     ext_modules = cythonize(extensions),
+    install_requires=install_requires,
     packages=find_packages("."),
     test_suite='nose.collector',
     tests_require=['nose', 'flaky'],
