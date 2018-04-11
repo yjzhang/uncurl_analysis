@@ -9,6 +9,7 @@ import uncurl
 from uncurl.sparse_utils import symmetric_kld
 
 from . import gene_extraction, relabeling
+from .entropy import entropy
 
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.manifold import TSNE, MDS
@@ -31,6 +32,7 @@ class SCAnalysis(object):
             cell_frac=1.0,
             dim_red_option='mds',
             baseline_dim_red='none',
+            pval_n_perms=50,
             **uncurl_kwargs):
         """
         Args:
@@ -67,6 +69,10 @@ class SCAnalysis(object):
         self.has_w_sampled = os.path.exists(self.w_sampled_f)
         self._w_sampled = None
 
+        self.labels_f = os.path.join(data_dir, 'labels.txt')
+        self.has_labels = os.path.exists(self.labels_f)
+        self._labels = None
+
         self.m_f = os.path.join(data_dir, 'm.txt')
         self.has_m = os.path.exists(self.m_f)
         self._m = None
@@ -98,9 +104,14 @@ class SCAnalysis(object):
         self.has_top_genes = os.path.exists(self.top_genes_f)
         self._top_genes = None
 
+        self.pval_n_perms = pval_n_perms
         self.pvals_f = os.path.join(data_dir, 'gene_pvals.txt')
         self.has_pvals = os.path.exists(self.pvals_f)
         self._pvals = None
+
+        self.entropy_f = os.path.join(data_dir, 'entropy.txt')
+        self.has_entropy = os.path.exists(self.entropy_f)
+        self._entropy = None
 
         self.pickle_f = os.path.join(data_dir, 'sc_analysis.pkl')
 
@@ -131,7 +142,7 @@ class SCAnalysis(object):
         """
         if self._cell_subset is None:
             if not self.has_cell_subset:
-                data = self.data
+                data = self.data_normalized
                 gene_subset = uncurl.max_variance_genes(data, nbins=5,
                         frac=self.frac)
                 np.savetxt(self.gene_subset_f, gene_subset, fmt='%d')
@@ -165,9 +176,14 @@ class SCAnalysis(object):
     @property
     def data_normalized(self):
         """
-        Data before gene/cell filters, but normalized.
+        Data before gene/cell filters, but read count-normalized.
         """
-        # TODO
+        if self._data_normalized is None:
+            if self.normalize:
+                self._data_normalized = uncurl.preprocessing.cell_normalize(self.data)
+            else:
+                self._data_normalized = self.data
+        return self._data_normalized
 
     @property
     def data_subset(self):
@@ -175,7 +191,7 @@ class SCAnalysis(object):
         Data after passed through the gene/cell filters
         """
         if self._data_subset is None:
-            data = self.data
+            data = self.data_normalized
             data_subset = data[self.gene_subset, :]
             data_subset = data_subset[:, self.cell_subset]
             self._data_subset = data_subset
@@ -192,7 +208,8 @@ class SCAnalysis(object):
                 self._gene_names = np.loadtxt(self.gene_names_f, dtype=str)
                 return self._gene_names
             except:
-                return None
+                # default gene names
+                return np.array(['gene_{0}'.format(i) for i in range(self.data.shape[0])])
         else:
             return self._gene_names
 
@@ -240,6 +257,17 @@ class SCAnalysis(object):
             return self._w_sampled
 
     @property
+    def labels(self):
+        if not self.has_labels:
+            self._labels = self.w.argmax(0)
+            np.savetxt(self.labels_f, self._labels, fmt='%d')
+            self.has_labels = True
+        else:
+            if self._labels is None:
+                self._labels = np.loadtxt(self.labels_f, dtype=int)
+        return self._labels
+
+    @property
     def mds_means(self):
         """
         MDS of the post-uncurl cluster means
@@ -248,7 +276,7 @@ class SCAnalysis(object):
             if self.has_mds_means:
                 self._mds_means = np.loadtxt(self.mds_means_f)
             else:
-                self._mds_means = uncurl.dim_reduce(self.m, self.w, 2)
+                self._mds_means = uncurl.dim_reduce(self.m, self.w, 2).T
                 np.savetxt(self.mds_means_f, self._mds_means)
                 self.has_mds_means = True
         return self._mds_means
@@ -295,16 +323,16 @@ class SCAnalysis(object):
             else:
                 baseline_dim_red = self.baseline_dim_red.lower()
                 if baseline_dim_red == 'none':
-                    return None
+                    return self.dim_red
                 else:
                     data_sampled = self.data_sampled
                     tsvd = TruncatedSVD(50)
-                    data_log_norm = uncurl.preprocessing.log1p(uncurl.preprocessing.cell_normalize(data_sampled))
+                    data_log_norm = uncurl.preprocessing.log1p(data_sampled)
                     if baseline_dim_red == 'tsne':
                         data_tsvd = tsvd.fit_transform(data_log_norm.T)
                         tsne = TSNE(2)
                         data_dim_red = tsne.fit_transform(data_tsvd)
-                    elif baseline_dim_red == 'tsvd':
+                    elif baseline_dim_red == 'tsvd' or baseline_dim_red == 'pca':
                         tsvd2 = TruncatedSVD(2)
                         data_dim_red = tsvd2.fit_transform(data_log_norm.T)
                     elif baseline_dim_red == 'mds':
@@ -312,7 +340,7 @@ class SCAnalysis(object):
                         mds = MDS(2)
                         data_dim_red = mds.fit_transform(data_tsvd)
                     self._baseline_vis = data_dim_red.T
-                    np.savetxt(self.baseline_vis_f, data_dim_red.T)
+                    np.savetxt(self.baseline_vis_f, self._baseline_vis)
                     self.has_baseline_vis = True
         return self._baseline_vis
 
@@ -366,7 +394,7 @@ class SCAnalysis(object):
                         data_cell_subset,
                         self.m.shape[1],
                         self.w.argmax(0),
-                        n_perms=100)
+                        n_perms=self.pval_n_perms)
                 self._pvals = gene_extraction.c_scores_to_pvals(
                         self.top_genes,
                         permutations)
@@ -374,6 +402,17 @@ class SCAnalysis(object):
                     json.dump(self._pvals, f)
                 self.has_pvals = True
         return self._pvals
+
+    @property
+    def entropy(self):
+        if self._entropy is None:
+            if self.has_entropy:
+                self._entropy = np.loadtxt(self.entropy_f)
+            else:
+                self._entropy = entropy(self.w_sampled)
+                np.savetxt(self.entropy_f, self._entropy)
+                self.has_entropy = True
+        return self._entropy
 
     def save_pickle_reset(self):
         """
@@ -401,9 +440,9 @@ class SCAnalysis(object):
         Runs split or merge
         """
         data_sampled = self.data_sampled
-        cell_subset = self.cell_subset
         m_new = self.m
-        w_new = self.w[:, cell_subset]
+        w_new = self.w_sampled
+        print(w_new.shape)
         if split_or_merge == 'split':
             self.clusters += 1
             c = clusters_to_change[0]
@@ -414,6 +453,8 @@ class SCAnalysis(object):
             m_new, w_new = relabeling.merge_clusters(data_sampled, m_new, w_new,
                     clusters_to_change, **self.uncurl_kwargs)
         # set w_sampled
+        print(w_new.shape)
+        print(m_new.shape)
         self._w_sampled = w_new
         np.savetxt(self.w_sampled_f, w_new)
         self._m = m_new
@@ -421,12 +462,60 @@ class SCAnalysis(object):
         self.has_w_sampled = True
 
 
-def load_params_from_folder(self):
+    def run_full_analysis(self):
         """
-        Given a folder that already has saved files in it, this loads the parameters from file...
+        Runs the whole analysis pipeline.
         """
-        if os.path.exists(os.path.join(self.output_dir, 'params.json')):
-            with open(os.path.join(self.output_dir, 'params.json')) as f:
+        self.run_uncurl()
+        self.labels
+        self.mds_means
+        self.baseline_vis
+        self.dim_red
+        self.top_genes
+        self.pvals
+        self.entropy
+
+    def run_post_analysis(self):
+        """
+        Re-runs the whole analysis except for uncurl - can be used after split/merge.
+        """
+        self.has_labels = False
+        self._labels = None
+        self.labels
+        self.has_mds_means = False
+        self._mds_means = None
+        self.mds_means
+        self.has_baseline_vis = False
+        self._baseline_vis = None
+        self.baseline_vis
+        self.has_dim_red = False
+        self._dim_red = None
+        self.dim_red
+        self.has_top_genes = False
+        self._top_genes = None
+        self.top_genes
+        self.has_pvals = False
+        self._pvals = None
+        self.pvals
+        self.has_entropy = False
+        self._entropy = None
+        self.entropy
+
+    def load_params_from_folder(self):
+        """
+        If there is a file called 'params.json' in the folder, this loads all the parameters from the file, and overwrites the current object.
+
+        If a saved pickle file exists in the folder, this returns that pickle object.
+
+        Returns:
+            SCAnalysis object loaded from self.data_dir.
+        """
+        if os.path.exists(self.pickle_f):
+            with open(self.pickle_f) as f:
+                p = pickle.load(f)
+                return p
+        if os.path.exists(os.path.join(self.data_dir, 'params.json')):
+            with open(os.path.join(self.data_dir, 'params.json')) as f:
                 params = json.load(f)
                 if 'normalize_data' in params:
                     self.normalize = True
@@ -438,5 +527,7 @@ def load_params_from_folder(self):
                     self.max_reads = int(params['max_reads'])
                     self.baseline_dim_red = params['baseline_vismethod']
                     self.dim_red_option = params['vismethod']
+                    self.uncurl_kwargs = params
                 except:
                     pass
+        return self
