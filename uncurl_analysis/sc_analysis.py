@@ -296,7 +296,8 @@ class SCAnalysis(object):
     @property
     def cell_sample(self):
         """
-        Cell sample (after applying data subset)
+        Cell sample (after applying data subset) - based on uniform
+        simplex sampling on W.
         """
         if self.cell_frac == 1:
             self._cell_sample = np.arange(self.w.shape[1])
@@ -408,6 +409,11 @@ class SCAnalysis(object):
                 with open(self.top_genes_f, 'w') as f:
                     json.dump(self._top_genes, f)
                 self.has_top_genes = True
+            if type(self._top_genes.keys()[0]) != int:
+                new_top_genes = {}
+                for k, v in self._top_genes.items():
+                    new_top_genes[int(k)] = v
+                self._top_genes = new_top_genes
         return self._top_genes
 
     @property
@@ -429,6 +435,11 @@ class SCAnalysis(object):
                 with open(self.pvals_f, 'w') as f:
                     json.dump(self._pvals, f)
                 self.has_pvals = True
+            if type(self._pvals.keys()[0]) != int:
+                new_pvals = {}
+                for k, v in self._pvals.items():
+                    new_pvals[int(k)] = v
+                self._pvals = new_pvals
         return self._pvals
 
     @property
