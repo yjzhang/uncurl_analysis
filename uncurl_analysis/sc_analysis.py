@@ -94,12 +94,12 @@ class SCAnalysis(object):
         self.has_cell_sample = os.path.exists(self.cell_sample_f)
         self._cell_sample = None
 
-        self.baseline_dim_red = baseline_dim_red
+        self.baseline_dim_red = baseline_dim_red.lower()
         self.baseline_vis_f = os.path.join(data_dir, 'baseline_vis.txt')
         self.has_baseline_vis = os.path.exists(self.baseline_vis_f)
         self._baseline_vis = None
 
-        self.dim_red_option = dim_red_option
+        self.dim_red_option = dim_red_option.lower()
         self.dim_red_f = os.path.join(data_dir, 'mds_data.txt')
         self.has_dim_red = os.path.exists(self.dim_red_f)
         self._dim_red = None
@@ -171,7 +171,7 @@ class SCAnalysis(object):
                 data = self.data
                 read_counts = np.array(data.sum(0)).flatten()
                 self._cell_subset = (read_counts >= self.min_reads) & (read_counts <= self.max_reads)
-                np.savetxt(self.cell_subset_f, self._cell_subset, fmt='%s')
+                np.savetxt(self.cell_subset_f, self._cell_subset, fmt='%d')
                 self.has_cell_subset = True
             else:
                 self._cell_subset = np.loadtxt(self.cell_subset_f, dtype=bool)
@@ -270,7 +270,7 @@ class SCAnalysis(object):
     @property
     def labels(self):
         if not self.has_labels:
-            self._labels = self.w.argmax(0)
+            self._labels = self.w_sampled.argmax(0)
             np.savetxt(self.labels_f, self._labels, fmt='%d')
             self.has_labels = True
         else:
@@ -380,6 +380,7 @@ class SCAnalysis(object):
             if self.has_dim_red:
                 self._dim_red = np.loadtxt(self.dim_red_f)
             else:
+                self.dim_red_option = self.dim_red_option.lower()
                 w = self.w_sampled
                 if self.dim_red_option == 'mds':
                     self._dim_red = uncurl.mds(self.m_sampled, w, 2)
@@ -504,6 +505,8 @@ class SCAnalysis(object):
     def run_post_analysis(self):
         """
         Re-runs the whole analysis except for uncurl - can be used after split/merge.
+
+        No need to change the baseline vis.
         """
         self.has_labels = False
         self._labels = None
@@ -511,9 +514,9 @@ class SCAnalysis(object):
         self.has_mds_means = False
         self._mds_means = None
         self.mds_means
-        self.has_baseline_vis = False
-        self._baseline_vis = None
-        self.baseline_vis
+        #self.has_baseline_vis = False
+        #self._baseline_vis = None
+        #self.baseline_vis
         self.has_dim_red = False
         self._dim_red = None
         self.dim_red

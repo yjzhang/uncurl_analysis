@@ -65,6 +65,7 @@ class SCAnalysisTest(TestCase):
                 clusters=8,
                 data_filename='data.mtx',
                 baseline_dim_red='tsvd',
+                dim_red_option='MDS',
                 normalize=True,
                 min_reads=500,
                 max_reads=4000,
@@ -81,6 +82,7 @@ class SCAnalysisTest(TestCase):
         top_genes = sca.top_genes
         self.assertEqual(len(top_genes), 8)
         self.assertEqual(len(top_genes[0]), sca.data.shape[0])
+        self.assertEqual(sca.dim_red.shape[0], 2)
 
     def test_pickling(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
@@ -99,12 +101,14 @@ class SCAnalysisTest(TestCase):
         self.assertTrue(sca.has_dim_red)
         self.assertTrue(sca.has_w)
         self.assertTrue(sca.has_m)
+        self.assertEqual(sca.cell_subset.shape[0], 400)
 
     def test_split_cluster(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
                 clusters=8,
                 data_filename='data.mtx',
                 baseline_dim_red='tsvd',
+                dim_red_option='MDS',
                 cell_frac=1.0,
                 max_iters=20,
                 inner_max_iters=10)
