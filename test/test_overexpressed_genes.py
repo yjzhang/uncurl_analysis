@@ -34,7 +34,7 @@ class OverexpressedGenesTest(TestCase):
     def testPermutationTest(self):
         scores_sparse = find_overexpressed_genes(self.data, self.labs)
         perms = generate_permutations(self.data, len(set(self.labs)),
-                n_perms=100)
+                n_perms=20)
         pvals = c_scores_to_pvals(scores_sparse, perms)
         for k in set(self.labs):
             scores_k = scores_sparse[k]

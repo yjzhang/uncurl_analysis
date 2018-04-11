@@ -100,9 +100,9 @@ class SCAnalysisTest(TestCase):
                 clusters=8,
                 data_filename='data.mtx',
                 baseline_dim_red='tsvd',
-                cell_frac=1.0,
-                max_iters=30,
-                inner_max_iters=100)
+                cell_frac=0.9,
+                max_iters=20,
+                inner_max_iters=10)
         sca.run_full_analysis()
         # split two clusters....
         clusters = sca.labels
@@ -113,7 +113,7 @@ class SCAnalysisTest(TestCase):
         sca.recluster('split', [top_cluster])
         sca.run_post_analysis()
         self.assertEqual(sca.clusters, 9)
-        self.assertEqual(self.w_sampled.shape[0], 9)
+        self.assertEqual(sca.w_sampled.shape[0], 9)
 
     """
     def test_merge_cluster(self):
