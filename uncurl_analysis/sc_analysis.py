@@ -208,10 +208,13 @@ class SCAnalysis(object):
         if self._gene_names is None:
             try:
                 self._gene_names = np.loadtxt(self.gene_names_f, dtype=str)
+                if len(self._gene_names) == 0:
+                    self._gene_names = np.array(['gene_{0}'.format(i) for i in range(self.data.shape[0])])
                 return self._gene_names
             except:
                 # default gene names
-                return np.array(['gene_{0}'.format(i) for i in range(self.data.shape[0])])
+                self._gene_names = np.array(['gene_{0}'.format(i) for i in range(self.data.shape[0])])
+                return self._gene_names
         else:
             return self._gene_names
 
