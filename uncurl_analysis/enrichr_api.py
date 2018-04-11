@@ -37,7 +37,11 @@ def enrichr_add_list(gene_list, description=''):
             'list': (None, '\n'.join(gene_list)),
             'description': (None, description)
             }
-    response = requests.post(ENRICHR_URL + query_param, files=payload)
+    try:
+        response = requests.post(ENRICHR_URL + query_param, files=payload,
+            timeout=5)
+    except requests.exceptions.Timeout:
+        return 'timeout'
     if not response.ok:
         raise Exception('Error analyzing gene list')
     data = json.loads(response.text)
@@ -58,9 +62,13 @@ def enrichr_query(user_list_id,
     """
     query_param = 'enrich'
     query_string = '?userListId={0}&backgroundType={1}'
-    response =  requests.get(ENRICHR_URL
-            + query_param
-            + query_string.format(user_list_id, gene_set_library))
+    try:
+        response =  requests.get(ENRICHR_URL
+                + query_param
+                + query_string.format(user_list_id, gene_set_library),
+                timeout=5)
+    except requests.exceptions.Timeout:
+        return 'timeout'
     if not response.ok:
         raise Exception('Error fetching enrichment results')
     data = json.loads(response.text)
