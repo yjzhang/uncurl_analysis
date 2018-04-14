@@ -117,12 +117,18 @@ class SCAnalysis(object):
         self.has_pvals = os.path.exists(self.pvals_f)
         self._pvals = None
 
-        self.t_scores_f = os.path.join(data_dir, 't_scores.txt')
+        self.t_scores_f = os.path.join(data_dir, 't_scores.npy')
         self.has_t_scores = os.path.exists(self.t_scores_f)
-        self.t_pvals_f = os.path.join(data_dir, 't_pvals.txt')
+        self._t_scores = None
+        self.t_pvals_f = os.path.join(data_dir, 't_pvals.npy')
         self.has_t_pvals = os.path.exists(self.t_pvals_f)
+        self._t_pvals = None
         self.separation_scores_f = os.path.join(data_dir, 'separation_scores.txt')
-        self.has_separation_scores_f = os.path.exists(self.separation_scores_f)
+        self.has_separation_scores = os.path.exists(self.separation_scores_f)
+        self._separation_scores = None
+        self.separation_genes_f = os.path.join(data_dir, 'separation_genes.txt')
+        self.has_separation_genes = os.path.exists(self.separation_genes)
+        self._separation_genes = None
 
         self.entropy_f = os.path.join(data_dir, 'entropy.txt')
         self.has_entropy = os.path.exists(self.entropy_f)
@@ -407,11 +413,51 @@ class SCAnalysis(object):
 
     @property
     def t_scores(self):
-        pass
+        if self._t_scores is None:
+            if self.has_t_scores:
+                self._t_scores = np.load(self.t_scores_f)
+            else:
+                data_cell_subset = self.data[:, self.cell_subset]
+                self._t_scores, self._t_pvals = gene_extraction.pairwise_t(
+                        data_cell_subset,
+                        self.w)
+                np.save(self.t_scores_f, self._t_scores)
+                np.save(self.t_pvals_f, self._t_pvals)
+                self.has_t_scores = True
+                self.has_t_pvals = True
+        return self._t_scores
 
     @property
     def t_pvals(self):
-        pass
+        if self._t_pvals is None:
+            if self.has_t_pvals:
+                self._t_pvals = np.load(self.t_pvals_f)
+            else:
+                self.t_scores
+        return self._t_pvals
+
+    @property
+    def separation_scores(self):
+        if self._separation_scores is None:
+            if self.has_separation_scores:
+                self._separation_scores = np.loadtxt(self.separation_scores_f)
+            else:
+                self._separation_scores, self._separation_genes = gene_extraction.separation_scores_from_t(
+                        self.t_scores, self.t_pvals)
+                np.savetxt(self.separation_scores_f, self._separation_scores)
+                np.savetxt(self.separation_genes_f, self._separation_genes, fmt='%d')
+                self.has_separation_scores = True
+                self.has_separation_genes = True
+        return self._separation_scores
+
+    @property
+    def separation_genes(self):
+        if self._separation_genes is None:
+            if self.has_separation_genes:
+                self.separation_genes = np.loadtxt(self.separation_genes_f, dtype=int)
+            else:
+                self.separation_scores
+        return self._separation_genes
 
     @property
     def top_genes(self):
@@ -420,19 +466,22 @@ class SCAnalysis(object):
             if self.has_top_genes:
                 with open(self.top_genes_f) as f:
                     self._top_genes = json.load(f)
+                with open(self.pvals_f) as f:
+                    self._pvals = json.load(f)
             else:
-                data_cell_subset = self.data[:, self.cell_subset]
-                self._top_genes = gene_extraction.find_overexpressed_genes(
-                        data_cell_subset,
-                        self.w.argmax(0))
+                self._top_genes, self._pvals = gene_extraction.c_scores_from_t(
+                        self.t_scores, self.t_pvals)
                 with open(self.top_genes_f, 'w') as f:
                     json.dump(self._top_genes, f)
+                with open(self.pvals_f, 'w') as f:
+                    json.dump(self._pvals, f)
                 self.has_top_genes = True
-            if type(self._top_genes.keys()[0]) != int:
-                new_top_genes = {}
-                for k, v in self._top_genes.items():
-                    new_top_genes[int(k)] = v
-                self._top_genes = new_top_genes
+                self.has_pvals = True
+        if type(self._top_genes.keys()[0]) != int:
+            new_top_genes = {}
+            for k, v in self._top_genes.items():
+                new_top_genes[int(k)] = v
+            self._top_genes = new_top_genes
         return self._top_genes
 
     @property
@@ -443,23 +492,12 @@ class SCAnalysis(object):
                 with open(self.pvals_f) as f:
                     self._pvals = json.load(f)
             else:
-                data_cell_subset = self.data[:, self.cell_subset]
-                permutations = gene_extraction.generate_permutations(
-                        data_cell_subset,
-                        self.m.shape[1],
-                        self.w.argmax(0),
-                        n_perms=self.pval_n_perms)
-                self._pvals = gene_extraction.c_scores_to_pvals(
-                        self.top_genes,
-                        permutations)
-                with open(self.pvals_f, 'w') as f:
-                    json.dump(self._pvals, f)
-                self.has_pvals = True
-            if type(self._pvals.keys()[0]) != int:
-                new_pvals = {}
-                for k, v in self._pvals.items():
-                    new_pvals[int(k)] = v
-                self._pvals = new_pvals
+                self.top_genes
+        if type(self._pvals.keys()[0]) != int:
+            new_pvals = {}
+            for k, v in self._pvals.items():
+                new_pvals[int(k)] = v
+            self._pvals = new_pvals
         return self._pvals
 
     @property
@@ -491,6 +529,9 @@ class SCAnalysis(object):
         self._dim_red = None
         self._top_genes = None
         self._pvals = None
+        self._t_scores = None
+        self._t_pvals = None
+        self._separation_scores = None
         with open(self.pickle_f, 'wb') as f:
             pickle.dump(self, f)
 
@@ -554,7 +595,6 @@ class SCAnalysis(object):
         self.has_top_genes = False
         self._top_genes = None
         self.top_genes
-        self.has_pvals = False
         self._pvals = None
         self.pvals
         self.has_entropy = False

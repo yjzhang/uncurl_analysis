@@ -7,6 +7,7 @@ import line_profiler
 import numpy as np
 import scipy.io
 from scipy import sparse
+import uncurl
 
 from uncurl_analysis import gene_extraction
 from uncurl_analysis.sparse_gene_extraction import csc_unweighted_t_test
@@ -36,3 +37,9 @@ profile.runcall(func,
         cells,
         genes)
 profile.print_stats()
+
+# test weighted t test
+genes = uncurl.max_variance_genes(data, 5, 0.2)
+data_subset = data[genes,:]
+M, W, ll = uncurl.run_state_estimation(data_subset, 8, max_iters=20, inner_max_iters=50)
+t_scores, t_pvals = gene_extraction.pairwise_t(data, W)

@@ -132,9 +132,11 @@ def separation_scores_from_t(scores, pvals):
 
     Returns:
         separation_scores (array): shape (k, k)
+        best_genes (array): shape (k, k) - indicates the gene associated with
+        each score.
     """
-    separation_scores = t_test_separation_scores(scores, pvals)
-    return separation_scores
+    separation_scores, best_genes = t_test_separation_scores(scores, pvals)
+    return separation_scores, best_genes
 
 def find_overexpressed_genes_m(m, eps=0):
     """
