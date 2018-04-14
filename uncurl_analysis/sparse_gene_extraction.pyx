@@ -345,7 +345,7 @@ def t_test_separation_scores(np.ndarray[double, ndim=3] scores,
     K = scores.shape[0]
     genes = scores.shape[2]
     cdef double[:,:] separation_scores = np.zeros((K, K))
-    cdef int[:,:] best_genes = np.zeros((K, K))
+    cdef int[:,:] best_genes = np.zeros((K, K), dtype=np.int32)
     cdef int best_gene
     for k1 in range(K):
         for k2 in range(K):

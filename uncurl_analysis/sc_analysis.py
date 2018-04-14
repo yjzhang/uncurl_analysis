@@ -127,7 +127,7 @@ class SCAnalysis(object):
         self.has_separation_scores = os.path.exists(self.separation_scores_f)
         self._separation_scores = None
         self.separation_genes_f = os.path.join(data_dir, 'separation_genes.txt')
-        self.has_separation_genes = os.path.exists(self.separation_genes)
+        self.has_separation_genes = os.path.exists(self.separation_genes_f)
         self._separation_genes = None
 
         self.entropy_f = os.path.join(data_dir, 'entropy.txt')
@@ -454,7 +454,7 @@ class SCAnalysis(object):
     def separation_genes(self):
         if self._separation_genes is None:
             if self.has_separation_genes:
-                self.separation_genes = np.loadtxt(self.separation_genes_f, dtype=int)
+                self._separation_genes = np.loadtxt(self.separation_genes_f, dtype=int)
             else:
                 self.separation_scores
         return self._separation_genes
