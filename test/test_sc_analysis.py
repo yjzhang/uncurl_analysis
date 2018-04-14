@@ -22,6 +22,7 @@ class SCAnalysisTest(TestCase):
             shutil.rmtree(self.data_dir)
             os.makedirs(self.data_dir)
         self.data = sparse.csc_matrix(dat['data'])
+        self.data = self.data[:5000,:]
         scipy.io.mmwrite(os.path.join(self.data_dir, 'data.mtx'), self.data)
 
     def test_load_from_folder(self):

@@ -349,6 +349,8 @@ def t_test_separation_scores(np.ndarray[double, ndim=3] scores,
     cdef int best_gene
     for k1 in range(K):
         for k2 in range(K):
+            if k2 == k1:
+                continue
             best_pval = 1
             best_gene = 0
             for g in range(genes):

@@ -12,7 +12,8 @@ class OverexpressedGenesTest(TestCase):
         # TODO: generate synthetic datasets for testing,
         # where top cluster-specific genes are known
         dat = loadmat('data/10x_pooled_400.mat')
-        self.data = sparse.csc_matrix(dat['data'])
+        # take 5000 genes arbitrarily?
+        self.data = sparse.csc_matrix(dat['data'])[:5000,:]
         self.labs = dat['labels'].flatten()
 
     def testDense(self):
