@@ -172,7 +172,7 @@ def t_test(double m1, double m2, double v1, double v2,
     cdef double t_test_statistic = (m1 - m2)/sqrt(v1/n1 + v2/n2)
     # TODO: we really should try Welch's dof procedure
     cdef int dof = int(round(n1 + n2 - 2))
-    cdef double pval = stats.t.cdf(t_test_statistic, dof)
+    cdef double pval = 1 - stats.t.cdf(t_test_statistic, dof)
     return pval
 
 
@@ -294,7 +294,7 @@ def t_test_c_scores(np.ndarray[double, ndim=3] scores,
         c_pvals[k] = []
     for g in range(genes):
         for k in range(K):
-            min_cs = scores_[k, 0, g]
+            min_cs = 1e10
             best_pval = 1
             for k2 in range(K):
                 cs = scores_[k, k2, g]
@@ -303,7 +303,7 @@ def t_test_c_scores(np.ndarray[double, ndim=3] scores,
                     best_pval = pvals_[k, k2, g]
             c_scores[k].append((g, exp2(min_cs)))
             c_pvals[k].append((g, best_pval))
-    for k in range(k):
+    for k in range(K):
         k_c_scores = np.array([x[1] for x in c_scores[k]])
         indices = k_c_scores.argsort()[::-1]
         c_scores[k] = [c_scores[k][i] for i in indices]

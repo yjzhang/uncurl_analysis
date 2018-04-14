@@ -77,7 +77,7 @@ def find_overexpressed_genes_weighted(data, w, eps=0):
             eps)
     return scores
 
-def pairwise_t_test(data, w_or_labels):
+def pairwise_t(data, w_or_labels):
     """
     Computes pairwise t-test between all pairs of clusters and all genes.
     """
@@ -105,13 +105,9 @@ def pairwise_t_test(data, w_or_labels):
                 labels_array,
                 cells,
                 genes)
-    print(scores, pvals)
-    sys.stderr.write('done with t-test\n')
-    sys.stderr.write(str(scores.shape)+'\n')
-    sys.stderr.write(str(pvals.shape)+'\n')
     return scores, pvals
 
-def c_scores_from_t_test(scores, pvals):
+def c_scores_from_t(scores, pvals):
     """
     Converts pairwise t-test results to c-scores, where the c-scores are
     a sorted dict.

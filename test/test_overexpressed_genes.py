@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from uncurl_analysis.gene_extraction import find_overexpressed_genes, generate_permutations, calculate_permutation_pval, c_scores_to_pvals, pairwise_t_test, c_scores_from_t_test
+from uncurl_analysis.gene_extraction import find_overexpressed_genes, generate_permutations, calculate_permutation_pval, c_scores_to_pvals, pairwise_t, c_scores_from_t
 
 from scipy import sparse
 from scipy.io import loadmat
@@ -46,12 +46,15 @@ class OverexpressedGenesTest(TestCase):
                 self.assertTrue(pval <= 1.0 and pval >= 0.0)
 
     def testTTest(self):
-        t_test_scores, t_test_p_vals = pairwise_t_test(self.data, self.labs)
+        t_test_scores, t_test_p_vals = pairwise_t(self.data, self.labs)
         self.assertEqual(t_test_scores.shape, t_test_p_vals.shape)
-        k = len(set(self.labs))
+        K = len(set(self.labs))
         genes, cells = self.data.shape
-        self.assertEqual(t_test_scores.shape, (k, k, genes))
-        c_scores, c_pvals = c_scores_from_t_test(t_test_scores, t_test_p_vals)
-        for k in set(self.labs):
-            self.assertTrue(c_scores[k][0] > 1)
-            self.assertTrue(c_pvals[k][0] < 0.05)
+        self.assertEqual(t_test_scores.shape, (K, K, genes))
+        c_scores, c_pvals = c_scores_from_t(t_test_scores, t_test_p_vals)
+        for k in range(K):
+            print(k)
+            print(c_scores[k][:10])
+            print(c_pvals[k][:10])
+            self.assertTrue(c_scores[k][0][1] >= 1)
+            self.assertTrue(c_pvals[k][0][1] <= 0.05)
