@@ -26,6 +26,8 @@ ctypedef fused numeric:
     float
     double
 
+cdf = stats.t.cdf
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
@@ -164,7 +166,7 @@ def csc_weighted_c_scores(np.ndarray[numeric, ndim=1] data,
     return scores
 
 
-def t_test(double m1, double m2, double v1, double v2,
+cdef inline double t_test(double m1, double m2, double v1, double v2,
         double n1, double n2):
     """
     Computes a two-sample t-test, returning the p-value.
@@ -172,7 +174,7 @@ def t_test(double m1, double m2, double v1, double v2,
     cdef double t_test_statistic = (m1 - m2)/sqrt(v1/n1 + v2/n2)
     # TODO: we really should try Welch's dof procedure
     cdef int dof = int(round(n1 + n2 - 2))
-    cdef double pval = 1 - stats.t.cdf(t_test_statistic, dof)
+    cdef double pval = 1 - cdf(t_test_statistic, dof)
     return pval
 
 
@@ -214,10 +216,15 @@ def csc_weighted_t_test(np.ndarray[numeric, ndim=1] data,
                 mean_k2 = cluster_means[g, k2]
                 var_k2 = mean_k2**2 - cluster_sq_means[g, k2]
                 scores[k, k2, g] = mean_k - cluster_means[g, k2]
-                pvals[k, k2, g] = t_test(mean_k, cluster_means[g, k2], var_k,
-                        var_k2,
-                        cluster_cell_counts[k],
-                        cluster_cell_counts[k2])
+                # truncate this so that we don't have to perform so many
+                # t-test calculations - this is solely for efficiency :(
+                if scores[k, k2, g] <= 0:
+                    pvals[k, k2, g] = 1
+                else:
+                    pvals[k, k2, g] = t_test(mean_k, cluster_means[g, k2], var_k,
+                            var_k2,
+                            cluster_cell_counts[k],
+                            cluster_cell_counts[k2])
     return np.asarray(scores), np.asarray(pvals)
 
 
@@ -252,15 +259,21 @@ def csc_unweighted_t_test(np.ndarray[numeric, ndim=1] data,
     cdef double[:,:,:] scores = np.zeros((K, K, genes))
     cdef double[:,:,:] pvals = np.zeros((K, K, genes))
     cdef double mean_k, mean_k2, var_k, var_k2
+    cdef double[:,:] cluster_vars = np.zeros((genes, K))
+    for g in range(genes):
+        for k in range(K):
+            cluster_vars[g, k] = cluster_sq_means[g, k] - cluster_means[g, k]**2
     for g in range(genes):
         for k in range(K):
             mean_k = cluster_means[g, k]
-            var_k = cluster_sq_means[g, k] - mean_k**2
+            var_k = cluster_vars[g, k]
             for k2 in range(K):
                 mean_k2 = cluster_means[g, k2]
-                var_k2 = cluster_sq_means[g, k2] - mean_k2**2
+                var_k2 = cluster_vars[g, k2]
                 scores[k, k2, g] = mean_k - cluster_means[g, k2]
-                if scores[k, k2, g] == 0:
+                # truncate this so that we don't have to perform so many
+                # t-test calculations - this is solely for efficiency :(
+                if scores[k, k2, g] <= 0:
                     pvals[k, k2, g] = 1
                 else:
                     pvals[k, k2, g] = t_test(mean_k, mean_k2, var_k,
@@ -307,7 +320,9 @@ def t_test_c_scores(np.ndarray[double, ndim=3] scores,
         k_c_scores = np.array([x[1] for x in c_scores[k]])
         indices = k_c_scores.argsort()[::-1]
         c_scores[k] = [c_scores[k][i] for i in indices]
-        c_pvals[k] = [c_pvals[k][i] for i in indices]
+        k_p_vals = np.array([x[1] for x in c_pvals[k]])
+        p_indices = k_p_vals.argsort()
+        c_pvals[k] = [c_pvals[k][i] for i in p_indices]
     return c_scores, c_pvals
 
 @cython.boundscheck(False)

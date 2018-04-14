@@ -117,6 +117,13 @@ class SCAnalysis(object):
         self.has_pvals = os.path.exists(self.pvals_f)
         self._pvals = None
 
+        self.t_scores_f = os.path.join(data_dir, 't_scores.txt')
+        self.has_t_scores = os.path.exists(self.t_scores_f)
+        self.t_pvals_f = os.path.join(data_dir, 't_pvals.txt')
+        self.has_t_pvals = os.path.exists(self.t_pvals_f)
+        self.separation_scores_f = os.path.join(data_dir, 'separation_scores.txt')
+        self.has_separation_scores_f = os.path.exists(self.separation_scores_f)
+
         self.entropy_f = os.path.join(data_dir, 'entropy.txt')
         self.has_entropy = os.path.exists(self.entropy_f)
         self._entropy = None
@@ -399,7 +406,16 @@ class SCAnalysis(object):
         return self._dim_red
 
     @property
+    def t_scores(self):
+        pass
+
+    @property
+    def t_pvals(self):
+        pass
+
+    @property
     def top_genes(self):
+        """Dict of cluster : [(gene, c-score)...]"""
         if self._top_genes is None:
             if self.has_top_genes:
                 with open(self.top_genes_f) as f:
@@ -421,6 +437,7 @@ class SCAnalysis(object):
 
     @property
     def pvals(self):
+        """Dict of cluster : [(gene, p-val)...]"""
         if self._pvals is None:
             if self.has_pvals:
                 with open(self.pvals_f) as f:
