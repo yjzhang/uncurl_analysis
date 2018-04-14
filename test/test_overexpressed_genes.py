@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from uncurl_analysis.gene_extraction import find_overexpressed_genes, generate_permutations, calculate_permutation_pval, c_scores_to_pvals, pairwise_t, c_scores_from_t
+from uncurl_analysis.gene_extraction import find_overexpressed_genes, generate_permutations, calculate_permutation_pval, c_scores_to_pvals, pairwise_t, c_scores_from_t, separation_scores_from_t
 
 from scipy import sparse
 from scipy.io import loadmat
@@ -58,3 +58,6 @@ class OverexpressedGenesTest(TestCase):
             print(c_pvals[k][:10])
             self.assertTrue(c_scores[k][0][1] >= 1)
             self.assertTrue(c_pvals[k][0][1] <= 0.05)
+        # test separation score
+        separation_scores = separation_scores_from_t(t_test_scores, t_test_p_vals)
+        self.assertEqual(separation_scores.shape, (K, K))

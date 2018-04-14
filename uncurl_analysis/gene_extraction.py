@@ -4,7 +4,7 @@ import sys
 import numpy as np
 from scipy import sparse
 
-from uncurl_analysis.sparse_gene_extraction import csc_c_scores, csc_weighted_c_scores, csc_weighted_t_test, csc_unweighted_t_test, t_test_c_scores
+from uncurl_analysis.sparse_gene_extraction import csc_c_scores, csc_weighted_c_scores, csc_weighted_t_test, csc_unweighted_t_test, t_test_c_scores, t_test_separation_scores
 
 # TODO: efficient sparse implementation of find_overexpressed_genes?
 def find_overexpressed_genes(data, labels, eps=0):
@@ -109,11 +109,32 @@ def pairwise_t(data, w_or_labels):
 
 def c_scores_from_t(scores, pvals):
     """
-    Converts pairwise t-test results to c-scores, where the c-scores are
-    a sorted dict.
+    Converts pairwise t-test results to c-scores.
+
+    Args:
+        scores (array): shape (k, k, genes)
+        pvals (array): shape (k, k, genes)
+
+    Returns:
+        c_scores (dict): {k : [(gene, score)...]}
+        c_pvals (dict): {k : [(gene, pval)...]}
     """
     c_scores, c_pvals = t_test_c_scores(scores, pvals)
     return c_scores, c_pvals
+
+def separation_scores_from_t(scores, pvals):
+    """
+    Converts pairwise t-test results to separation scores.
+
+    Args:
+        scores (array): shape (k, k, genes)
+        pvals (array): shape (k, k, genes)
+
+    Returns:
+        separation_scores (array): shape (k, k)
+    """
+    separation_scores = t_test_separation_scores(scores, pvals)
+    return separation_scores
 
 def find_overexpressed_genes_m(m, eps=0):
     """
