@@ -208,7 +208,7 @@ class SCAnalysis(object):
         if self._gene_names is None:
             try:
                 self._gene_names = np.loadtxt(self.gene_names_f, dtype=str)
-                if len(self._gene_names) == 0:
+                if len(self._gene_names) <= 1:
                     self._gene_names = np.array(['gene_{0}'.format(i) for i in range(self.data.shape[0])])
                 return self._gene_names
             except:
@@ -570,7 +570,10 @@ class SCAnalysis(object):
                     self.max_reads = int(params['max_reads'])
                     self.baseline_dim_red = params['baseline_vismethod']
                     self.dim_red_option = params['vismethod']
-                    self.uncurl_kwargs = params
                 except:
                     pass
+        if os.path.exists(os.path.join(self.data_dir, 'uncurl_kwargs.json')):
+            with open(os.path.join(self.data_dir, 'uncurl_kwargs.json')) as f:
+                uncurl_kwargs = json.load(f)
+                self.uncurl_kwargs = uncurl_kwargs
         return self

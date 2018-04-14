@@ -1,9 +1,10 @@
 from __future__ import print_function
+import sys
 
 import numpy as np
 from scipy import sparse
 
-from uncurl_analysis.sparse_gene_extraction import csc_overexpressed_genes
+from uncurl_analysis.sparse_gene_extraction import csc_c_scores, csc_weighted_c_scores, csc_weighted_t_test, csc_unweighted_t_test, t_test_c_scores
 
 # TODO: efficient sparse implementation of find_overexpressed_genes?
 def find_overexpressed_genes(data, labels, eps=0):
@@ -32,7 +33,7 @@ def find_overexpressed_genes(data, labels, eps=0):
         for i, l in enumerate(labels):
             labels_array[i] = labels_map[l]
         data_csc = sparse.csc_matrix(data)
-        scores = csc_overexpressed_genes(
+        scores = csc_c_scores(
                 data_csc.data,
                 data_csc.indices,
                 data_csc.indptr,
@@ -62,6 +63,61 @@ def find_overexpressed_genes(data, labels, eps=0):
     for k in labels_set:
         scores[k].sort(key=lambda x: x[1], reverse=True)
     return scores
+
+def find_overexpressed_genes_weighted(data, w, eps=0):
+    data_csc = sparse.csc_matrix(data)
+    genes, cells = data.shape
+    scores = csc_weighted_c_scores(
+            data_csc.data,
+            data_csc.indices,
+            data_csc.indptr,
+            w,
+            cells,
+            genes,
+            eps)
+    return scores
+
+def pairwise_t_test(data, w_or_labels):
+    """
+    Computes pairwise t-test between all pairs of clusters and all genes.
+    """
+    data_csc = sparse.csc_matrix(data)
+    genes, cells = data.shape
+    if len(w_or_labels.shape) == 2:
+        scores, pvals = csc_weighted_t_test(
+                data_csc.data,
+                data_csc.indices,
+                data_csc.indptr,
+                w_or_labels,
+                cells,
+                genes)
+    else:
+        labels_array = np.zeros(len(w_or_labels), dtype=int)
+        labels_map = {}
+        for i, l in enumerate(sorted(list(set(w_or_labels)))):
+            labels_map[l] = i
+        for i, l in enumerate(w_or_labels):
+            labels_array[i] = labels_map[l]
+        scores, pvals = csc_unweighted_t_test(
+                data_csc.data,
+                data_csc.indices,
+                data_csc.indptr,
+                labels_array,
+                cells,
+                genes)
+    print(scores, pvals)
+    sys.stderr.write('done with t-test\n')
+    sys.stderr.write(str(scores.shape)+'\n')
+    sys.stderr.write(str(pvals.shape)+'\n')
+    return scores, pvals
+
+def c_scores_from_t_test(scores, pvals):
+    """
+    Converts pairwise t-test results to c-scores, where the c-scores are
+    a sorted dict.
+    """
+    c_scores, c_pvals = t_test_c_scores(scores, pvals)
+    return c_scores, c_pvals
 
 def find_overexpressed_genes_m(m, eps=0):
     """
