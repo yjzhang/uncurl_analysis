@@ -85,7 +85,7 @@ class SCAnalysisTest(TestCase):
         self.assertEqual(len(top_genes[0]), sca.data.shape[0])
         self.assertEqual(sca.dim_red.shape[0], 2)
 
-    def test_pickling(self):
+    def test_json(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
                 clusters=8,
                 data_filename='data.mtx',
@@ -94,7 +94,7 @@ class SCAnalysisTest(TestCase):
                 max_iters=20,
                 inner_max_iters=20)
         sca.run_full_analysis()
-        sca.save_pickle_reset()
+        sca.save_json_reset()
         sca = sca.load_params_from_folder()
         self.assertEqual(sca.clusters, 8)
         self.assertEqual(sca.baseline_dim_red, 'tsvd')

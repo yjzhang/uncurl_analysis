@@ -1,6 +1,5 @@
 import json
 import os
-import pickle
 
 import numpy as np
 import scipy.io
@@ -147,7 +146,7 @@ class SCAnalysis(object):
         self.has_entropy = os.path.exists(self.entropy_f)
         self._entropy = None
 
-        self.pickle_f = os.path.join(data_dir, 'sc_analysis.pkl')
+        self.json_f = os.path.join(data_dir, 'sc_analysis.json')
 
 
     @property
@@ -524,20 +523,24 @@ class SCAnalysis(object):
                 self.has_entropy = True
         return self._entropy
 
-    def save_pickle_reset(self):
+    def save_json_reset(self):
         """
-        Removes all cached data, saves to pickle
+        Removes all cached data, saves to json
         """
         self._data = None
         self._data_normalized = None
         self._data_subset = None
         self._gene_names = None
         self._gene_subset = None
+        self._cell_sample = None
         self._w = None
         self._w_sampled = None
         self._m = None
         self._m_sampled = None
+        self._mds_means = None
+        self._labels = None
         self._cell_subset = None
+        self._gene_subset_sampled = None
         self._baseline_vis = None
         self._dim_red = None
         self._top_genes = None
@@ -545,8 +548,9 @@ class SCAnalysis(object):
         self._t_scores = None
         self._t_pvals = None
         self._separation_scores = None
-        with open(self.pickle_f, 'wb') as f:
-            pickle.dump(self, f)
+        self._entropy = None
+        with open(self.json_f, 'w') as f:
+            json.dump(self.__dict__, f)
 
 
     def recluster(self, split_or_merge='split',
@@ -623,10 +627,11 @@ class SCAnalysis(object):
         Returns:
             SCAnalysis object loaded from self.data_dir.
         """
-        if os.path.exists(self.pickle_f):
-            with open(self.pickle_f) as f:
-                p = pickle.load(f)
-                return p
+        if os.path.exists(self.json_f):
+            with open(self.json_f) as f:
+                p = json.load(f)
+                self.__dict__ = p
+                return self
         if os.path.exists(os.path.join(self.data_dir, 'params.json')):
             with open(os.path.join(self.data_dir, 'params.json')) as f:
                 params = json.load(f)
