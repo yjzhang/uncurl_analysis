@@ -51,6 +51,19 @@ class SCAnalysis(object):
         self._data_subset = None
         self._data_normalized = None
 
+        df1 = os.path.join(data_dir, 'data.mtx')
+        df2 = os.path.join(data_dir, 'data.mtx.gz')
+        df3 = os.path.join(data_dir, 'data.txt')
+        df4 = os.path.join(data_dir, 'data.txt.gz')
+        if os.path.exists(df1):
+            self.data_f = df1
+        elif os.path.exists(df2):
+            self.data_f = df2
+        elif os.path.exists(df3):
+            self.data_f = df3
+        elif os.path.exists(df4):
+            self.data_f = df4
+
         self.gene_names_f = os.path.join(data_dir, 'gene_names.txt')
         self._gene_names = None
 
