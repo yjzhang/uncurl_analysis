@@ -331,7 +331,7 @@ def t_test_c_scores(np.ndarray[double, ndim=3] scores,
 @cython.wraparound(False)
 @cython.nonecheck(False)
 def t_test_separation_scores(np.ndarray[double, ndim=3] scores,
-        np.ndarray[double, ndim=3] pvals, double eps=1e-30):
+        np.ndarray[double, ndim=3] pvals, double eps=1e-100):
     """
     Converts the output of the pairwise t-test procedure into separation scores.
 
