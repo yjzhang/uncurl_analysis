@@ -1,5 +1,6 @@
 import json
 import os
+import time
 
 import numpy as np
 import scipy.io
@@ -146,6 +147,9 @@ class SCAnalysis(object):
         self.has_entropy = os.path.exists(self.entropy_f)
         self._entropy = None
 
+        # dict of output_name : running time
+        self.profiling = {}
+
         self.json_f = os.path.join(data_dir, 'sc_analysis.json')
 
 
@@ -175,12 +179,14 @@ class SCAnalysis(object):
         """
         if self._gene_subset is None:
             if not self.has_gene_subset:
+                t = time.time()
                 data = self.data_normalized[:, self.cell_subset]
                 gene_subset = uncurl.max_variance_genes(data, nbins=5,
                         frac=self.frac)
                 gene_subset = np.array(gene_subset)
                 np.savetxt(self.gene_subset_f, gene_subset, fmt='%d')
                 self.has_gene_subset = True
+                self.profiling['gene_subset'] = time.time() - t
             else:
                 gene_subset = np.loadtxt(self.gene_subset_f, dtype=int)
             self._gene_subset = gene_subset
@@ -193,11 +199,13 @@ class SCAnalysis(object):
         """
         if self._cell_subset is None:
             if not self.has_cell_subset:
+                t = time.time()
                 data = self.data
                 read_counts = np.array(data.sum(0)).flatten()
                 self._cell_subset = (read_counts >= self.min_reads) & (read_counts <= self.max_reads)
                 np.savetxt(self.cell_subset_f, self._cell_subset, fmt='%d')
                 self.has_cell_subset = True
+                self.profiling['cell_subset'] = time.time() - t
             else:
                 self._cell_subset = np.loadtxt(self.cell_subset_f, dtype=bool)
         return self._cell_subset
@@ -247,6 +255,7 @@ class SCAnalysis(object):
         """
         Runs uncurl on self.data_subset.
         """
+        t = time.time()
         m, w, ll = uncurl.run_state_estimation(self.data_subset,
                 clusters=self.clusters,
                 **self.uncurl_kwargs)
@@ -256,6 +265,7 @@ class SCAnalysis(object):
         self._w = w
         self.has_w = True
         self.has_m = True
+        self.profiling['uncurl'] = time.time() - t
 
     @property
     def m(self):
@@ -377,6 +387,7 @@ class SCAnalysis(object):
             if self.has_baseline_vis:
                 self._baseline_vis = np.loadtxt(self.baseline_vis_f)
             else:
+                t = time.time()
                 baseline_dim_red = self.baseline_dim_red.lower()
                 if baseline_dim_red == 'none':
                     return self.dim_red
@@ -398,6 +409,7 @@ class SCAnalysis(object):
                     self._baseline_vis = data_dim_red.T
                     np.savetxt(self.baseline_vis_f, self._baseline_vis)
                     self.has_baseline_vis = True
+                self.profiling['baseline_vis'] = time.time() - t
         return self._baseline_vis
 
     @property
@@ -409,6 +421,7 @@ class SCAnalysis(object):
             if self.has_dim_red:
                 self._dim_red = np.loadtxt(self.dim_red_f)
             else:
+                t = time.time()
                 self.dim_red_option = self.dim_red_option.lower()
                 w = self.w_sampled
                 if self.dim_red_option == 'mds':
@@ -421,6 +434,7 @@ class SCAnalysis(object):
                     self._dim_red = pca.fit_transform(w.T).T
                 np.savetxt(self.dim_red_f, self._dim_red)
                 self.has_dim_red = True
+                self.profiling['dim_red'] = time.time() - t
         return self._dim_red
 
     @property
@@ -429,6 +443,7 @@ class SCAnalysis(object):
             if self.has_t_scores:
                 self._t_scores = np.load(self.t_scores_f)
             else:
+                t = time.time()
                 data_cell_subset = self.data[:, self.cell_subset]
                 self._t_scores, self._t_pvals = gene_extraction.pairwise_t(
                         data_cell_subset,
@@ -437,6 +452,7 @@ class SCAnalysis(object):
                 np.save(self.t_pvals_f, self._t_pvals)
                 self.has_t_scores = True
                 self.has_t_pvals = True
+                self.profiling['t_scores'] = time.time() - t
         return self._t_scores
 
     @property
@@ -489,7 +505,7 @@ class SCAnalysis(object):
                     json.dump(self._pvals, f)
                 self.has_top_genes = True
                 self.has_pvals = True
-        if type(self._top_genes.keys()[0]) != int:
+        if 0 not in self._top_genes.keys():
             new_top_genes = {}
             for k, v in self._top_genes.items():
                 new_top_genes[int(k)] = v
@@ -505,7 +521,7 @@ class SCAnalysis(object):
                     self._pvals = json.load(f)
             else:
                 self.top_genes
-        if type(self._pvals.keys()[0]) != int:
+        if 0 not in self._pvals.keys():
             new_pvals = {}
             for k, v in self._pvals.items():
                 new_pvals[int(k)] = v
@@ -549,6 +565,7 @@ class SCAnalysis(object):
         self._t_pvals = None
         self._separation_scores = None
         self._entropy = None
+        self._separation_genes = None
         with open(self.json_f, 'w') as f:
             json.dump(self.__dict__, f)
 
@@ -559,6 +576,10 @@ class SCAnalysis(object):
         Runs split or merge
         """
         data_sampled = self.data_sampled
+        if 'init_means' in self.uncurl_kwargs:
+            del self.uncurl_kwargs['init_means']
+        if 'init_weights' in self.uncurl_kwargs:
+            del self.uncurl_kwargs['init_weights']
         m_new = self.m_sampled
         w_new = self.w_sampled
         if split_or_merge == 'split':
@@ -590,6 +611,7 @@ class SCAnalysis(object):
         self.top_genes
         self.pvals
         self.entropy
+        self.separation_scores
 
     def run_post_analysis(self):
         """
@@ -609,6 +631,9 @@ class SCAnalysis(object):
         self.has_dim_red = False
         self._dim_red = None
         self.dim_red
+        self.has_t_scores = False
+        self._t_scores = None
+        self.t_scores
         self.has_top_genes = False
         self._top_genes = None
         self.top_genes
@@ -617,6 +642,9 @@ class SCAnalysis(object):
         self.has_entropy = False
         self._entropy = None
         self.entropy
+        self.has_separation_scores = False
+        self._separation_scores = None
+        self.separation_scores
 
     def load_params_from_folder(self):
         """
@@ -631,6 +659,8 @@ class SCAnalysis(object):
             with open(self.json_f) as f:
                 p = json.load(f)
                 self.__dict__ = p
+                if 'profiling' not in p:
+                    self.profiling = {}
                 return self
         if os.path.exists(os.path.join(self.data_dir, 'params.json')):
             with open(os.path.join(self.data_dir, 'params.json')) as f:

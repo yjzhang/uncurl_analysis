@@ -16,12 +16,14 @@ ENRICHR_LIBRARIES = [
 #        'GTEx_Tissue_Sample_Gene_Expression_Profiles_up',
         'ARCHS4_Tissues',
         'ARCHS4_Cell-lines',
-        'GO_Biological_Process_2017b',
-        'GO_Cellular_Component_2017b',
-        'GO_Molecular_Function_2017b',
+        'GO_Biological_Process_2017',
+        'GO_Cellular_Component_2017',
+        'GO_Molecular_Function_2017',
         'Jensen_COMPARTMENTS',
         'Jensen_DISEASES',
         'Jensen_TISSUES',
+        'KEGG_2016',
+        'Reactome_2016',
         ]
 
 def enrichr_add_list(gene_list, description=''):
