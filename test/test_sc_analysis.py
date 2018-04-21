@@ -9,12 +9,14 @@ from uncurl_analysis import sc_analysis
 from scipy import sparse
 import scipy.io
 from scipy.io import loadmat
+from sklearn.metrics.cluster import normalized_mutual_info_score as nmi
 import numpy as np
 
 class SCAnalysisTest(TestCase):
 
     def setUp(self):
         dat = loadmat('data/10x_pooled_400.mat')
+        self.labs = dat['labels'].flatten()
         self.data_dir = '/tmp/uncurl_analysis/test'
         try:
             os.makedirs(self.data_dir)
@@ -22,7 +24,8 @@ class SCAnalysisTest(TestCase):
             shutil.rmtree(self.data_dir)
             os.makedirs(self.data_dir)
         self.data = sparse.csc_matrix(dat['data'])
-        self.data = self.data[:5000,:]
+        # take subset of 5000 genes
+        self.data = self.data[5000:10000,:]
         scipy.io.mmwrite(os.path.join(self.data_dir, 'data.mtx'), self.data)
 
     def test_load_from_folder(self):
@@ -36,6 +39,7 @@ class SCAnalysisTest(TestCase):
     def test_run_uncurl(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
                 clusters=8,
+                frac=0.5,
                 data_filename='data.mtx',
                 max_iters=20,
                 inner_max_iters=50)
@@ -46,6 +50,8 @@ class SCAnalysisTest(TestCase):
         self.assertTrue(sca.w.shape[1] == self.data.shape[1])
         self.assertTrue(os.path.exists(sca.w_f))
         self.assertTrue(os.path.exists(sca.m_f))
+        print(nmi(sca.labels, self.labs))
+        self.assertTrue(nmi(sca.labels, self.labs) > 0.7)
 
     def test_dim_red_sample(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
@@ -68,13 +74,17 @@ class SCAnalysisTest(TestCase):
                 baseline_dim_red='tsvd',
                 dim_red_option='MDS',
                 normalize=True,
-                min_reads=500,
+                min_reads=10,
                 max_reads=4000,
-                cell_frac=0.2,
+                cell_frac=0.5,
                 max_iters=20,
                 inner_max_iters=20)
-        self.assertEqual(sca.cell_subset.shape[0], 400)
+        print(sca.data.shape)
+        print(sca.cell_subset.shape)
+        print(sca.cell_subset)
         print(sca.data_subset.shape)
+        self.assertEqual(sca.cell_subset.shape[0], 400)
+        self.assertTrue(sca.data_subset.shape[1] > 200)
         sca.run_full_analysis()
         self.assertTrue(sca.has_dim_red)
         self.assertTrue(sca.has_pvals)
@@ -90,7 +100,7 @@ class SCAnalysisTest(TestCase):
                 clusters=8,
                 data_filename='data.mtx',
                 baseline_dim_red='tsvd',
-                cell_frac=0.2,
+                cell_frac=0.5,
                 max_iters=20,
                 inner_max_iters=20)
         sca.run_full_analysis()
