@@ -447,7 +447,7 @@ class SCAnalysis(object):
                 data_cell_subset = self.data[:, self.cell_subset]
                 self._t_scores, self._t_pvals = gene_extraction.pairwise_t(
                         data_cell_subset,
-                        self.w)
+                        self.w_sampled)
                 np.save(self.t_scores_f, self._t_scores)
                 np.save(self.t_pvals_f, self._t_pvals)
                 self.has_t_scores = True
