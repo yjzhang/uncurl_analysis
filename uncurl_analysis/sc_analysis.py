@@ -444,14 +444,14 @@ class SCAnalysis(object):
                 self._t_scores = np.load(self.t_scores_f)
             else:
                 t = time.time()
-                data = self.data
-                w = self.w
                 if self.has_w_sampled:
-                    data = self.data[:, self.cell_subset]
+                    data = self.data[:, self.cell_sample]
                     w = self.w_sampled
+                else:
+                    data = self.data
+                    w = self.w
                 self._t_scores, self._t_pvals = gene_extraction.pairwise_t(
-                        data,
-                        w)
+                        data, w)
                 np.save(self.t_scores_f, self._t_scores)
                 np.save(self.t_pvals_f, self._t_pvals)
                 self.has_t_scores = True
@@ -641,8 +641,8 @@ class SCAnalysis(object):
         self.has_top_genes = False
         self._top_genes = None
         self.top_genes
-        self._pvals = None
-        self.pvals
+        #self._pvals = None
+        #self.pvals
         self.has_entropy = False
         self._entropy = None
         self.entropy

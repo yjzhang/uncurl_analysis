@@ -174,7 +174,7 @@ cdef inline double t_test(double m1, double m2, double v1, double v2,
     """
     cdef double t_test_statistic = (m1 - m2)/sqrt(v1/n1 + v2/n2)
     # TODO: we really should try Welch's dof procedure
-    cdef int dof = int(round(n1 + n2 - 2))
+    cdef double dof = max(n1 + n2 - 2, 1)
     cdef double pval = 1 - cdf(t_test_statistic, dof)
     return pval
 
@@ -216,14 +216,14 @@ def csc_weighted_t_test(np.ndarray[numeric, ndim=1] data,
             for k2 in range(K):
                 mean_k2 = cluster_means[g, k2]
                 var_k2 = cluster_sq_means[g, k2] - mean_k2**2
-                scores[k, k2, g] = mean_k - cluster_means[g, k2]
+                scores[k, k2, g] = mean_k - mean_k2
                 # truncate this so that we don't have to perform so many
                 # t-test calculations - this is solely for efficiency :(
                 # print(g, k, k2, var_k, var_k2, cluster_cell_counts[k])
                 if scores[k, k2, g] <= 0 or (var_k == 0 and var_k2 == 0):
                     pvals[k, k2, g] = 1
                 else:
-                    pvals[k, k2, g] = t_test(mean_k, cluster_means[g, k2], var_k,
+                    pvals[k, k2, g] = t_test(mean_k, mean_k2, var_k,
                             var_k2,
                             cluster_cell_counts[k],
                             cluster_cell_counts[k2])
