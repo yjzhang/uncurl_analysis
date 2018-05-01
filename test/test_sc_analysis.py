@@ -67,6 +67,26 @@ class SCAnalysisTest(TestCase):
         self.assertEqual(dr.shape[0], 2)
         self.assertEqual(dr.shape[1], int(0.2*sca.data.shape[1]))
 
+    def test_dim_red_2(self):
+        sca = sc_analysis.SCAnalysis(self.data_dir,
+                clusters=8,
+                data_filename='data.mtx',
+                dim_red_option='UMAP',
+                baseline_dim_red='UMAP',
+                cell_frac=0.2,
+                max_iters=20,
+                inner_max_iters=20)
+        mds_means = sca.mds_means
+        self.assertEqual(mds_means.shape[0], 2)
+        self.assertEqual(mds_means.shape[1], 8)
+        dr = sca.dim_red
+        self.assertEqual(dr.shape[0], 2)
+        self.assertEqual(dr.shape[1], int(0.2*sca.data.shape[1]))
+        dr_baseline = sca.baseline_vis
+        self.assertEqual(dr_baseline.shape[0], 2)
+        self.assertEqual(dr_baseline.shape[1], int(0.2*sca.data.shape[1]))
+
+
     def test_run_full_analysis(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
                 clusters=8,

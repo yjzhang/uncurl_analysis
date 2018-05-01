@@ -20,12 +20,12 @@ install_requires = [
         'scipy',
         'scikit-learn',
         'requests',
+        'umap-learn',
 ]
-
 
 setup(
     name='uncurl-analysis',
-    version='0.0.1',
+    version='0.1.1',
     author='Yue Zhang',
     author_email='yjzhang@cs.washington.edu',
     url='https://github.com/yjzhang/uncurl_analysis',
@@ -36,4 +36,12 @@ setup(
     packages=find_packages("."),
     test_suite='nose.collector',
     tests_require=['nose', 'flaky'],
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Topic :: Scientific/Engineering :: Bio-Informatics',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.4',
+    ],
+
 )

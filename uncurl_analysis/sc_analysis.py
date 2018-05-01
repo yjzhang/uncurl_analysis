@@ -16,6 +16,8 @@ from sklearn.manifold import TSNE, MDS
 
 import simplex_sample
 
+DIM_RED_OPTIONS = ['MDS', 'tSNE', 'TSVD', 'PCA', 'UMAP']
+
 class SCAnalysis(object):
     """
     This class represents an ongoing single-cell RNA-Seq analysis.
@@ -406,6 +408,11 @@ class SCAnalysis(object):
                         data_tsvd = tsvd.fit_transform(data_log_norm.T)
                         mds = MDS(2)
                         data_dim_red = mds.fit_transform(data_tsvd)
+                    elif baseline_dim_red == 'umap':
+                        from umap import UMAP
+                        um = UMAP()
+                        data_tsvd = tsvd.fit_transform(data_log_norm.T)
+                        data_dim_red = um.fit_transform(data_tsvd)
                     self._baseline_vis = data_dim_red.T
                     np.savetxt(self.baseline_vis_f, self._baseline_vis)
                     self.has_baseline_vis = True
@@ -432,6 +439,13 @@ class SCAnalysis(object):
                 elif self.dim_red_option == 'pca':
                     pca = PCA(2)
                     self._dim_red = pca.fit_transform(w.T).T
+                elif self.dim_red_option == 'tsvd':
+                    tsvd = TruncatedSVD(2)
+                    self._dim_red = tsvd.fit_transform(w.T).T
+                elif self.dim_red_option == 'umap':
+                    from umap import UMAP
+                    um = UMAP(metric='cosine')
+                    self._dim_red = um.fit_transform(w.T).T
                 np.savetxt(self.dim_red_f, self._dim_red)
                 self.has_dim_red = True
                 self.profiling['dim_red'] = time.time() - t
