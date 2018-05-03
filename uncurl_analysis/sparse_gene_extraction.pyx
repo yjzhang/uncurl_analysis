@@ -60,7 +60,8 @@ def csc_weighted_cluster_means(np.ndarray[numeric, ndim=1] data,
                 cluster_means[g, k] += data_[i2]*W_[k, c]
     for g in range(genes):
         for k in range(K):
-            cluster_means[g, k] = cluster_means[g, k]/cluster_cell_counts[k]
+            if cluster_cell_counts[k] > 0:
+                cluster_means[g, k] = cluster_means[g, k]/cluster_cell_counts[k]
     return cluster_means, cluster_cell_counts
 
 @cython.boundscheck(False)
@@ -94,7 +95,8 @@ def csc_unweighted_cluster_means(np.ndarray[numeric, ndim=1] data,
             cluster_means[g, k] += data_[i2]
     for g in range(genes):
         for k in range(K):
-            cluster_means[g, k] = cluster_means[g, k]/cluster_cell_counts[k]
+            if cluster_cell_counts[k] > 0:
+                cluster_means[g, k] = cluster_means[g, k]/cluster_cell_counts[k]
     return cluster_means, cluster_cell_counts
 
 @cython.boundscheck(False)
@@ -220,7 +222,7 @@ def csc_weighted_t_test(np.ndarray[numeric, ndim=1] data,
                 # truncate this so that we don't have to perform so many
                 # t-test calculations - this is solely for efficiency :(
                 # print(g, k, k2, var_k, var_k2, cluster_cell_counts[k])
-                if scores[k, k2, g] <= 0 or (var_k == 0 and var_k2 == 0):
+                if scores[k, k2, g] <= 0 or (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k2] == 0 or cluster_cell_counts[k] == 0:
                     pvals[k, k2, g] = 1
                 else:
                     pvals[k, k2, g] = t_test(mean_k, mean_k2, var_k,
@@ -275,7 +277,7 @@ def csc_unweighted_t_test(np.ndarray[numeric, ndim=1] data,
                 scores[k, k2, g] = mean_k - cluster_means[g, k2]
                 # truncate this so that we don't have to perform so many
                 # t-test calculations - this is solely for efficiency :(
-                if scores[k, k2, g] <= 0 or (var_k == 0 and var_k2 == 0):
+                if scores[k, k2, g] <= 0 or (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k2] == 0 or cluster_cell_counts[k] == 0:
                     pvals[k, k2, g] = 1
                 else:
                     pvals[k, k2, g] = t_test(mean_k, mean_k2, var_k,

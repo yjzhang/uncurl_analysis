@@ -1,6 +1,9 @@
 Analysis tools for UNCURL
 =========================
 
+.. image:: https://travis-ci.org/yjzhang/uncurl_analysis.svg
+    :target: https://travis-ci.org/yjzhang/uncurl_analysis
+
 Installation
 ------------
 
@@ -44,4 +47,8 @@ Example:
     from uncurl_analysis import bulk_data
 
     # bulk_means is a dict of label : array. cell is a 1d array.
-    scores = bulk_data.bulk_lookup(bulk_means, cell)
+    scores = bulk_data.bulk_lookup(bulk_means, cell, method='poisson')
+
+SCAnalysis: a framework for managing scRNA-seqdata analysis
+-----------------------------------------------------------
+
