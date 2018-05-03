@@ -9,4 +9,4 @@ install:
     - pip install pytest
     - pip install flaky
     - pip install .
-script: pytest
+script: python setup.py test
