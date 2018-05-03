@@ -31,7 +31,8 @@ from scipy.special import xlogy, gammaln
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics.pairwise import cosine_similarity
 
-from uncurl_analysis.sparse_bulk_data import csc_log_prob_poisson_no_norm
+from uncurl_analysis.sparse_bulk_data import csc_log_prob_poisson_no_norm,\
+        log_prob_poisson_no_norm
 
 # TODO: have a sparse, efficient way of calculating these metrics?
 def log_prob_poisson(bulk_data, cell, use_norm=False, eps=1e-10):
@@ -42,7 +43,7 @@ def log_prob_poisson(bulk_data, cell, use_norm=False, eps=1e-10):
     Assumes the same genes in both datasets.
 
     Args:
-        bulk_data (array): 1d array
+        bulk_data (array): 1d array, normalized to sum to 1
         cell (array): 1d array
     """
     cell_read_count = cell.sum()
@@ -60,7 +61,7 @@ def log_prob_poisson(bulk_data, cell, use_norm=False, eps=1e-10):
     if use_norm:
         return (xlogy(cell, b) - b - gammaln(cell)).sum()
     else:
-        return (xlogy(cell, b) - b).sum()
+        return log_prob_poisson_no_norm(cell, bulk_data)
 
 def rank_correlation(bulk_dataset, cell):
     return spearmanr(bulk_dataset, cell)[0]
