@@ -48,6 +48,9 @@ def csc_weighted_cluster_means(np.ndarray[numeric, ndim=1] data,
     cdef int2 g, c, start_ind, end_ind, i2
     cdef int2 k
     cdef int K = W.shape[0]
+    #print(W.shape[0], W.shape[1])
+    #print(cells)
+    #print(genes)
     cdef double[:,:] cluster_means = np.zeros((genes, K))
     cdef double[:] cluster_cell_counts = np.zeros(K) + eps
     for c in range(cells):
@@ -58,10 +61,15 @@ def csc_weighted_cluster_means(np.ndarray[numeric, ndim=1] data,
             for i2 in range(start_ind, end_ind):
                 g = indices_[i2]
                 cluster_means[g, k] += data_[i2]*W_[k, c]
+    #print('W.sum(0): ')
+    #print(W.sum(0))
+    #print('W.sum(1): ')
+    #print(W.sum(1))
+    #print('cluster_cell_counts:')
+    #print(np.asarray(cluster_cell_counts))
     for g in range(genes):
         for k in range(K):
-            if cluster_cell_counts[k] > 0:
-                cluster_means[g, k] = cluster_means[g, k]/cluster_cell_counts[k]
+            cluster_means[g, k] = cluster_means[g, k]/(cluster_cell_counts[k] + eps)
     return cluster_means, cluster_cell_counts
 
 @cython.boundscheck(False)
@@ -222,7 +230,7 @@ def csc_weighted_t_test(np.ndarray[numeric, ndim=1] data,
                 # truncate this so that we don't have to perform so many
                 # t-test calculations - this is solely for efficiency :(
                 # print(g, k, k2, var_k, var_k2, cluster_cell_counts[k])
-                if scores[k, k2, g] <= 0 or (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k2] == 0 or cluster_cell_counts[k] == 0:
+                if scores[k, k2, g] <= 0 or (var_k == 0 and var_k2 == 0) or (cluster_cell_counts[k2] == 0 and cluster_cell_counts[k] == 0):
                     pvals[k, k2, g] = 1
                 else:
                     pvals[k, k2, g] = t_test(mean_k, mean_k2, var_k,
