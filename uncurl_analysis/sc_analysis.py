@@ -22,6 +22,7 @@ class SCAnalysis(object):
     """
     This class represents an ongoing single-cell RNA-Seq analysis.
     """
+    # TODO: re-design this class to have more of a plugin-like framework?
 
     def __init__(self, data_dir,
             data_filename='data.mtx',
@@ -467,7 +468,7 @@ class SCAnalysis(object):
                     data = self.data[:, self.cell_subset]
                     w = self.w
                 self._t_scores, self._t_pvals = gene_extraction.pairwise_t(
-                        data, w)
+                        data, w.argmax(0))
                 np.save(self.t_scores_f, self._t_scores)
                 np.save(self.t_pvals_f, self._t_pvals)
                 self.has_t_scores = True

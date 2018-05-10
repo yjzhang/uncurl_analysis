@@ -96,7 +96,7 @@ def merge_clusters(data, m_old, w_old, clusters_to_merge,
 
     Returns: M_new, W_new
     """
-    k = m_old.shape[1] - 1
+    k = m_old.shape[1] - len(clusters_to_merge)
     m_init_new_col = np.zeros(m_old.shape[0])
     w_init_new_row = np.zeros(w_old.shape[1])
     clusters_to_remove = np.array([True for i in range(k+1)])
