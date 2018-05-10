@@ -328,8 +328,10 @@ class SCAnalysis(object):
             if self.has_mds_means:
                 self._mds_means = np.loadtxt(self.mds_means_f)
             else:
-                self._mds_means = uncurl.dim_reduce(self.m_sampled,
-                        self.w_sampled, 2).T
+                k = self.w_sampled.shape[0]
+                self._mds_means = np.zeros((2, k))
+                for i in range(k):
+                    self._mds_means[:,i] = self.dim_red[:, self.labels==i].mean(1)
                 np.savetxt(self.mds_means_f, self._mds_means)
                 self.has_mds_means = True
         return self._mds_means
