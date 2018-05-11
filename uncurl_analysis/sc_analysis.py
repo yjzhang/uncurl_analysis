@@ -628,9 +628,9 @@ class SCAnalysis(object):
         """
         self.run_uncurl()
         self.labels
-        self.mds_means
         self.baseline_vis
         self.dim_red
+        self.mds_means
         self.top_genes
         self.pvals
         self.entropy
@@ -645,15 +645,15 @@ class SCAnalysis(object):
         self.has_labels = False
         self._labels = None
         self.labels
-        self.has_mds_means = False
-        self._mds_means = None
-        self.mds_means
         #self.has_baseline_vis = False
         #self._baseline_vis = None
         #self.baseline_vis
         self.has_dim_red = False
         self._dim_red = None
         self.dim_red
+        self.has_mds_means = False
+        self._mds_means = None
+        self.mds_means
         self.has_t_scores = False
         self._t_scores = None
         self.t_scores
@@ -692,7 +692,7 @@ class SCAnalysis(object):
                     self.normalize = True
                 try:
                     self.clusters = int(params['k'])
-                    self.frac = float(params['gene_frac'])
+                    self.frac = float(params['genes_frac'])
                     self.cell_frac = float(params['cell_frac'])
                     self.min_reads = int(params['min_reads'])
                     self.max_reads = int(params['max_reads'])
