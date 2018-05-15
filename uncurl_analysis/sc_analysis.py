@@ -22,7 +22,9 @@ class SCAnalysis(object):
     """
     This class represents an ongoing single-cell RNA-Seq analysis.
     """
-    # TODO: re-design this class to have more of a plugin-like framework?
+    # TODO: re-design this class to have more of a plugin-like architecture
+    # have objects representing each of the analysis things that can be added
+    # to the SCAnalysis object at run-time
 
     def __init__(self, data_dir,
             data_filename='data.mtx',
@@ -138,6 +140,13 @@ class SCAnalysis(object):
         self.pvals_f = os.path.join(data_dir, 'gene_pvals.txt')
         self.has_pvals = os.path.exists(self.pvals_f)
         self._pvals = None
+
+        self.top_genes_1_vs_rest_f = os.path.join(data_dir, 'top_genes_1_vs_rest.txt')
+        self.has_top_genes_1_vs_rest = os.path.exists(self.top_genes_f)
+        self._top_genes_1_vs_rest = None
+        self.pvals_1_vs_rest_f = os.path.join(data_dir, 'gene_pvals_1_vs_rest.txt')
+        self.has_pvals_1_vs_rest = os.path.exists(self.pvals_f)
+        self._pvals_1_vs_rest = None
 
         self.t_scores_f = os.path.join(data_dir, 't_scores.npy')
         self.has_t_scores = os.path.exists(self.t_scores_f)
@@ -490,8 +499,11 @@ class SCAnalysis(object):
                 else:
                     data = self.data[:, self.cell_subset]
                     w = self.w
+                labels = w.argmax(0)
+                # TODO: have some option for eps?
                 self._t_scores, self._t_pvals = gene_extraction.pairwise_t(
-                        data, w.argmax(0))
+                        data, labels,
+                        eps=float(5*len(set(labels)))/data.shape[1])
                 np.save(self.t_scores_f, self._t_scores)
                 np.save(self.t_pvals_f, self._t_pvals)
                 self.has_t_scores = True
@@ -507,6 +519,46 @@ class SCAnalysis(object):
             else:
                 self.t_scores
         return self._t_pvals
+
+    @property
+    def top_genes_1_vs_rest(self):
+        if self._top_genes_1_vs_rest is None:
+            if self.has_top_genes_1_vs_rest:
+                with open(self.top_genes_1_vs_rest_f) as f:
+                    self._top_genes_1_vs_rest = json.load(f)
+                with open(self.pvals_1_vs_rest_f) as f:
+                    self._pvals_1_vs_rest = json.load(f)
+            else:
+                t = time.time()
+                if self.has_w_sampled:
+                    data = self.data_sampled_all_genes
+                    w = self.w_sampled
+                else:
+                    data = self.data[:, self.cell_subset]
+                    w = self.w
+                labels = w.argmax(0)
+                # TODO: have some option for eps?
+                self._top_genes_1_vs_rest, self._pvals_1_vs_rest = gene_extraction.one_vs_rest_t(
+                        data, labels,
+                        eps=float(5*len(set(labels)))/data.shape[1])
+                with open(self.top_genes_1_vs_rest_f, 'w') as f:
+                    json.dump(self._top_genes_1_vs_rest, f)
+                with open(self.pvals_1_vs_rest_f, 'w') as f:
+                    json.dump(self._pvals_1_vs_rest, f)
+                self.has_top_genes_1_vs_rest = True
+                self.has_pvals_1_vs_rest = True
+                self.profiling['top_genes_1_vs_rest'] = time.time() - t
+        return self._top_genes_1_vs_rest
+
+    @property
+    def pvals_1_vs_rest(self):
+        if self._pvals_1_vs_rest is None:
+            if self.has_pvals_1_vs_rest:
+                with open(self.pvals_1_vs_rest_f) as f:
+                    self._pvals_1_vs_rest = json.load(f)
+            else:
+                self.top_genes_1_vs_rest
+        return self._pvals_1_vs_rest
 
     @property
     def separation_scores(self):
@@ -620,6 +672,8 @@ class SCAnalysis(object):
         self._dim_red = None
         self._top_genes = None
         self._pvals = None
+        self._top_genes_1_vs_rest = None
+        self._pvals_1_vs_rest = None
         self._t_scores = None
         self._t_pvals = None
         self._separation_scores = None
@@ -667,6 +721,7 @@ class SCAnalysis(object):
         self.baseline_vis
         self.dim_red
         self.mds_means
+        self.top_genes_1_vs_rest
         self.top_genes
         self.pvals
         self.entropy
@@ -690,6 +745,11 @@ class SCAnalysis(object):
         self.has_mds_means = False
         self._mds_means = None
         self.mds_means
+
+        self.has_top_genes_1_vs_rest = False
+        self._top_genes_1_vs_rest = None
+        self.top_genes_1_vs_rest
+
         self.has_t_scores = False
         self._t_scores = None
         self.t_scores
