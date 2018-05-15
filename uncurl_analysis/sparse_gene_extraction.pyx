@@ -110,6 +110,47 @@ def csc_unweighted_cluster_means(np.ndarray[numeric, ndim=1] data,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
+def csc_1_vs_rest_cluster_means(np.ndarray[numeric, ndim=1] data,
+        np.ndarray[int2, ndim=1] indices,
+        np.ndarray[int2, ndim=1] indptr,
+        np.ndarray[long, ndim=1] labels,
+        Py_ssize_t cells,
+        Py_ssize_t genes):
+    """
+    Returns 3 arrays: cluster_means, rest_cluster_means (mean of all cells
+    NOT in cluster k), cluster_cell_counts
+    """
+    cdef numeric[:] data_ = data
+    cdef int2[:] indices_ = indices
+    cdef int2[:] indptr_ = indptr
+    cdef int2 g, c, start_ind, end_ind, i2
+    cdef int k, k2
+    labels_set = set(labels)
+    cdef int2 K = len(labels_set)
+    cdef double[:,:] cluster_means = np.zeros((genes, K))
+    cdef double[:,:] rest_cluster_means = np.zeros((genes, K))
+    cdef double[:] cluster_cell_counts = np.zeros(K)
+    for c in range(cells):
+        k = labels[c]
+        cluster_cell_counts[k] += 1
+        start_ind = indptr_[c]
+        end_ind = indptr_[c+1]
+        for i2 in range(start_ind, end_ind):
+            g = indices_[i2]
+            cluster_means[g, k] += data_[i2]
+            for k2 in range(K):
+                if k2 != k:
+                    rest_cluster_means[g, k2] += data_[i2]
+    for g in range(genes):
+        for k in range(K):
+            if cluster_cell_counts[k] > 0:
+                cluster_means[g, k] = cluster_means[g, k]/cluster_cell_counts[k]
+            rest_cluster_means[g, k] = rest_cluster_means[g, k]/(cells - cluster_cell_counts[k])
+    return cluster_means, rest_cluster_means, cluster_cell_counts
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
 def csc_c_scores(np.ndarray[numeric, ndim=1] data,
         np.ndarray[int2, ndim=1] indices,
         np.ndarray[int2, ndim=1] indptr,
@@ -293,6 +334,75 @@ def csc_unweighted_t_test(np.ndarray[numeric, ndim=1] data,
                             cluster_cell_counts[k],
                             cluster_cell_counts[k2])
     return np.asarray(scores), np.asarray(pvals)
+
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
+#@cython.nonecheck(False)
+def csc_unweighted_1_vs_rest_t_test(np.ndarray[numeric, ndim=1] data,
+        np.ndarray[int2, ndim=1] indices,
+        np.ndarray[int2, ndim=1] indptr,
+        np.ndarray[long, ndim=1] labels,
+        Py_ssize_t cells,
+        Py_ssize_t genes,
+        double eps=1.0):
+    """
+    Returns a 1 vs rest t-test for every gene and cluster.
+
+    Output is a matrix of shape (clusters, genes).
+    """
+    cdef double[:,:] cluster_means
+    cdef double[:,:] cluster_variances
+    cdef double[:] cluster_cell_counts
+    cdef np.ndarray[double, ndim=1] log_data = np.log2(data + eps)
+    cluster_means, rest_cluster_means, cluster_cell_counts = csc_1_vs_rest_cluster_means(
+            log_data, indices, indptr, labels, cells, genes)
+    # calculate variance... var = E[X]^2 - E[X^2]
+    cdef int2 g, k
+    cdef np.ndarray[double, ndim=1] log_data_sq = np.power(log_data, 2)
+    cdef double[:,:] cluster_sq_means
+    cluster_sq_means, rest_cluster_sq_means, _ = csc_1_vs_rest_cluster_means(
+            log_data_sq, indices, indptr, labels, cells, genes)
+    labels_set = set(labels)
+    cdef int2 K = len(labels_set)
+    cdef double[:,:] scores = np.zeros((K, genes))
+    cdef double[:,:] pvals = np.zeros((K, genes))
+    cdef double mean_k, mean_k2, var_k, var_k2
+    cdef double[:,:] cluster_vars = np.zeros((genes, K))
+    cdef double[:,:] rest_cluster_vars = np.zeros((genes, K))
+    for g in range(genes):
+        for k in range(K):
+            cluster_vars[g, k] = cluster_sq_means[g, k] - cluster_means[g, k]**2
+            rest_cluster_vars[g, k] = rest_cluster_sq_means[g, k] - rest_cluster_means[g, k]**2
+    for g in range(genes):
+        for k in range(K):
+            mean_k = cluster_means[g, k]
+            var_k = cluster_vars[g, k]
+            # sum up all the "rest" clusters
+            mean_k2 = rest_cluster_means[g, k]
+            var_k2 = rest_cluster_vars[g, k]
+            scores[k, g] = mean_k - mean_k2
+            if scores[k, g] <= 0 or (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k] == 0:
+                pvals[k, g] = 1
+            else:
+                pvals[k, g] = t_test(mean_k, mean_k2, var_k,
+                        var_k2,
+                        cluster_cell_counts[k],
+                        cells - cluster_cell_counts[k])
+    scores_output = {}
+    pvals_output = {}
+    for k in range(K):
+        scores_output[k] = []
+        pvals_output[k] = []
+    for g in range(genes):
+        for k in range(K):
+            scores_output[k].append((g, exp2(scores[k, g])))
+            pvals_output[k].append((g, pvals[k, g]))
+    # this section sorts all the c-scores and pvals.
+    for k in range(K):
+        scores_output[k].sort(key=lambda x: x[1], reverse=True)
+        pvals_output[k].sort(key=lambda x: x[1])
+    return scores_output, pvals_output
+
 
 
 @cython.boundscheck(False)

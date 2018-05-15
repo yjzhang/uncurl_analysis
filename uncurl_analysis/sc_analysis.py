@@ -600,9 +600,11 @@ class SCAnalysis(object):
         """
         Removes all cached data, saves to json
         """
+        # TODO: use some metaprogramming to get around this
         self._data = None
         self._data_normalized = None
         self._data_subset = None
+        self._data_sampled_all_genes = None
         self._gene_names = None
         self._gene_subset = None
         self._cell_sample = None
