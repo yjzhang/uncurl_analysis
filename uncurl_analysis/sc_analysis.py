@@ -142,10 +142,10 @@ class SCAnalysis(object):
         self._pvals = None
 
         self.top_genes_1_vs_rest_f = os.path.join(data_dir, 'top_genes_1_vs_rest.txt')
-        self.has_top_genes_1_vs_rest = os.path.exists(self.top_genes_f)
+        self.has_top_genes_1_vs_rest = os.path.exists(self.top_genes_1_vs_rest_f)
         self._top_genes_1_vs_rest = None
         self.pvals_1_vs_rest_f = os.path.join(data_dir, 'gene_pvals_1_vs_rest.txt')
-        self.has_pvals_1_vs_rest = os.path.exists(self.pvals_f)
+        self.has_pvals_1_vs_rest = os.path.exists(self.pvals_1_vs_rest_f)
         self._pvals_1_vs_rest = None
 
         self.t_scores_f = os.path.join(data_dir, 't_scores.npy')
@@ -548,6 +548,11 @@ class SCAnalysis(object):
                 self.has_top_genes_1_vs_rest = True
                 self.has_pvals_1_vs_rest = True
                 self.profiling['top_genes_1_vs_rest'] = time.time() - t
+        if 0 not in self._top_genes_1_vs_rest.keys():
+            new_top_genes = {}
+            for k, v in self._top_genes_1_vs_rest.items():
+                new_top_genes[int(k)] = v
+            self._top_genes_1_vs_rest = new_top_genes
         return self._top_genes_1_vs_rest
 
     @property
@@ -558,6 +563,11 @@ class SCAnalysis(object):
                     self._pvals_1_vs_rest = json.load(f)
             else:
                 self.top_genes_1_vs_rest
+        if 0 not in self._pvals_1_vs_rest.keys():
+            new_pvals = {}
+            for k, v in self._pvals_1_vs_rest.items():
+                new_pvals[int(k)] = v
+            self._pvals_1_vs_rest = new_pvals
         return self._pvals_1_vs_rest
 
     @property
