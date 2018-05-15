@@ -409,6 +409,7 @@ class SCAnalysis(object):
                         self._data_sampled_all_genes)
             else:
                 self._data_sampled_all_genes = scipy.io.mmread(self.data_sampled_all_genes_f)
+                self._data_sampled_all_genes = sparse.csc_matrix(self._data_sampled_all_genes)
         return self._data_sampled_all_genes
 
 
