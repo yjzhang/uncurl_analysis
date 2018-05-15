@@ -67,6 +67,12 @@ class SCAnalysis(object):
         elif os.path.exists(df4):
             self.data_f = df4
 
+        self.data_sampled_all_genes_f = os.path.join(data_dir,
+                'data_sampled_all_genes.mtx')
+        self.has_data_sampled_all_genes = os.path.exists(self.data_sampled_all_genes_f)
+        self._data_sampled_all_genes = None
+
+
         self.gene_names_f = os.path.join(data_dir, 'gene_names.txt')
         self._gene_names = None
 
@@ -383,6 +389,21 @@ class SCAnalysis(object):
         return data_subset[np.ix_(self.gene_subset_sampled, cell_sample)]
 
     @property
+    def data_sampled_all_genes(self):
+        """
+        Data after passed through the gene/cell filters, and sampled.
+        """
+        if self._data_sampled_all_genes is None:
+            if not self.has_data_sampled_all_genes:
+                self._data_sampled_all_genes = self.data[:, self.cell_subset][:, self.cell_sample]
+                scipy.io.mmwrite(self.data_sampled_all_genes_f,
+                        self._data_sampled_all_genes)
+            else:
+                self._data_sampled_all_genes = scipy.io.mmread(self.data_sampled_all_genes_f)
+        return self._data_sampled_all_genes
+
+
+    @property
     def baseline_vis(self):
         """
         baseline_vis is a non-uncurl-based 2D dimensionality reduction.
@@ -464,7 +485,7 @@ class SCAnalysis(object):
                 # this is complicated because we only want the cell subset,
                 # not the gene subset...
                 if self.has_w_sampled:
-                    data = self.data[:, self.cell_subset][:, self.cell_sample]
+                    data = self.data_sampled_all_genes
                     w = self.w_sampled
                 else:
                     data = self.data[:, self.cell_subset]
@@ -561,6 +582,19 @@ class SCAnalysis(object):
                 np.savetxt(self.entropy_f, self._entropy)
                 self.has_entropy = True
         return self._entropy
+
+    def data_sampled_gene(self, gene_name):
+        """
+        Returns vector containing the expression levels for each cell for
+        the gene with the given name
+        """
+        gene_name_indices = (self.gene_names == gene_name)
+        data = self.data_sampled_all_genes
+        data_gene = data[gene_name_indices, :]
+        if sparse.issparse(data_gene):
+            return data_gene.toarray().flatten()
+        else:
+            return data_gene.flatten()
 
     def save_json_reset(self):
         """

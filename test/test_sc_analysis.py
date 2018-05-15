@@ -27,6 +27,7 @@ class SCAnalysisTest(TestCase):
         # take subset of 5000 genes
         self.data = self.data[5000:10000,:]
         scipy.io.mmwrite(os.path.join(self.data_dir, 'data.mtx'), self.data)
+        shutil.copy('data/10x_pooled_400_gene_names.tsv', os.path.join(self.data_dir, 'gene_names.txt'))
 
     def test_load_from_folder(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
@@ -154,6 +155,18 @@ class SCAnalysisTest(TestCase):
         sca.run_post_analysis()
         self.assertEqual(sca.clusters, 9)
         self.assertEqual(sca.w_sampled.shape[0], 9)
+
+    def test_gene_names(self):
+        sca = sc_analysis.SCAnalysis(self.data_dir,
+                clusters=8,
+                data_filename='data.mtx',
+                baseline_dim_red='tsvd',
+                dim_red_option='MDS',
+                cell_frac=1.0,
+                max_iters=20,
+                inner_max_iters=10)
+        gene_info = sca.data_sampled_gene('AGRN')
+        self.assertEqual(gene_info.shape[0], sca.data_sampled_all_genes.shape[1])
 
     """
     def test_merge_cluster(self):
