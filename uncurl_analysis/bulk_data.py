@@ -82,6 +82,22 @@ def cosine(bulk_dataset, cell):
     else:
         return cosine_similarity(bulk_dataset, cell)
 
+def bulk_query(bulk_sample, cell, method='poisson'):
+    """
+    Returns a similarity score between the bulk sample and the given
+    cell. Potential metrics are same as in bulk_lookup.
+    """
+    comp_func = None
+    if method == 'poisson':
+        comp_func = log_prob_poisson
+    elif method == 'spearman' or method == 'rank_corr':
+        comp_func = rank_correlation
+    elif method == 'cosine':
+        comp_func = cosine
+    elif method == 'corr' or method == 'pearson':
+        comp_func = pearson_correlation
+    return comp_func(bulk_sample, cell)
+
 def bulk_lookup(datasets, cell, method='poisson'):
     """
     Returns a list of (dataset, value) pairs sorted by descending value,
