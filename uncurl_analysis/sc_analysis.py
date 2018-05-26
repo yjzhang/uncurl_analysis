@@ -707,12 +707,12 @@ class SCAnalysis(object):
         m_new = self.m_sampled
         w_new = self.w_sampled
         if split_or_merge == 'split':
-            self.clusters += 1
+            self.clusters = w_new.shape[0] + 1
             c = clusters_to_change[0]
             m_new, w_new = relabeling.split_cluster(data_sampled, m_new, w_new,
                     c, **self.uncurl_kwargs)
         elif split_or_merge == 'merge':
-            self.clusters -= len(clusters_to_change) + 1
+            self.clusters = w_new.shape[0] - len(clusters_to_change) + 1
             m_new, w_new = relabeling.merge_clusters(data_sampled, m_new, w_new,
                     clusters_to_change, **self.uncurl_kwargs)
         # set w_sampled
