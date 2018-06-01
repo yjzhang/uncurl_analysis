@@ -239,7 +239,8 @@ def csc_weighted_t_test(np.ndarray[numeric, ndim=1] data,
         np.ndarray[double, ndim=2] W,
         Py_ssize_t cells,
         Py_ssize_t genes,
-        double eps=1.0):
+        double eps=1.0,
+        int calc_pvals=True):
     """
     Returns the pairwise t-test score and p-val between each pair of clusters, for
     all genes.
@@ -271,13 +272,14 @@ def csc_weighted_t_test(np.ndarray[numeric, ndim=1] data,
                 # truncate this so that we don't have to perform so many
                 # t-test calculations - this is solely for efficiency :(
                 # print(g, k, k2, var_k, var_k2, cluster_cell_counts[k])
-                if scores[k, k2, g] <= 0 or (var_k == 0 and var_k2 == 0) or (cluster_cell_counts[k2] == 0 and cluster_cell_counts[k] == 0):
-                    pvals[k, k2, g] = 1
-                else:
-                    pvals[k, k2, g] = t_test(mean_k, mean_k2, var_k,
-                            var_k2,
-                            cluster_cell_counts[k],
-                            cluster_cell_counts[k2])
+                if calc_pvals:
+                    if scores[k, k2, g] <= 0 or (var_k == 0 and var_k2 == 0) or (cluster_cell_counts[k2] == 0 and cluster_cell_counts[k] == 0):
+                        pvals[k, k2, g] = 1
+                    else:
+                        pvals[k, k2, g] = t_test(mean_k, mean_k2, var_k,
+                                var_k2,
+                                cluster_cell_counts[k],
+                                cluster_cell_counts[k2])
     return np.asarray(scores), np.asarray(pvals)
 
 
@@ -290,7 +292,8 @@ def csc_unweighted_t_test(np.ndarray[numeric, ndim=1] data,
         np.ndarray[long, ndim=1] labels,
         Py_ssize_t cells,
         Py_ssize_t genes,
-        double eps=1.0):
+        double eps=1.0,
+        int calc_pvals=True):
     """
     Returns the pairwise t-test score and p-val between each pair of clusters, for
     all genes.
@@ -326,13 +329,14 @@ def csc_unweighted_t_test(np.ndarray[numeric, ndim=1] data,
                 scores[k, k2, g] = mean_k - cluster_means[g, k2]
                 # truncate this so that we don't have to perform so many
                 # t-test calculations - this is solely for efficiency :(
-                if scores[k, k2, g] <= 0 or (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k2] == 0 or cluster_cell_counts[k] == 0:
-                    pvals[k, k2, g] = 1
-                else:
-                    pvals[k, k2, g] = t_test(mean_k, mean_k2, var_k,
-                            var_k2,
-                            cluster_cell_counts[k],
-                            cluster_cell_counts[k2])
+                if calc_pvals:
+                    if scores[k, k2, g] <= 0 or (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k2] == 0 or cluster_cell_counts[k] == 0:
+                        pvals[k, k2, g] = 1
+                    else:
+                        pvals[k, k2, g] = t_test(mean_k, mean_k2, var_k,
+                                var_k2,
+                                cluster_cell_counts[k],
+                                cluster_cell_counts[k2])
     return np.asarray(scores), np.asarray(pvals)
 
 #@cython.boundscheck(False)
@@ -344,7 +348,8 @@ def csc_unweighted_1_vs_rest_t_test(np.ndarray[numeric, ndim=1] data,
         np.ndarray[long, ndim=1] labels,
         Py_ssize_t cells,
         Py_ssize_t genes,
-        double eps=1.0):
+        double eps=1.0,
+        int calc_pvals=True):
     """
     Returns a 1 vs rest t-test for every gene and cluster.
 
@@ -381,13 +386,14 @@ def csc_unweighted_1_vs_rest_t_test(np.ndarray[numeric, ndim=1] data,
             mean_k2 = rest_cluster_means[g, k]
             var_k2 = rest_cluster_vars[g, k]
             scores[k, g] = mean_k - mean_k2
-            if scores[k, g] <= 0 or (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k] == 0:
-                pvals[k, g] = 1
-            else:
-                pvals[k, g] = t_test(mean_k, mean_k2, var_k,
-                        var_k2,
-                        cluster_cell_counts[k],
-                        cells - cluster_cell_counts[k])
+            if calc_pvals:
+                if scores[k, g] <= 0 or (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k] == 0:
+                    pvals[k, g] = 1
+                else:
+                    pvals[k, g] = t_test(mean_k, mean_k2, var_k,
+                            var_k2,
+                            cluster_cell_counts[k],
+                            cells - cluster_cell_counts[k])
     scores_output = {}
     pvals_output = {}
     for k in range(K):

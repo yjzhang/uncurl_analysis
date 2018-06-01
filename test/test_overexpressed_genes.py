@@ -86,3 +86,6 @@ class OverexpressedGenesTest(TestCase):
             self.assertTrue((pvals >= 0).all())
             self.assertTrue((pvals <= 1).all())
             self.assertTrue((cscores >= 0).all())
+        t_test_scores, _ = one_vs_rest_t(self.data, self.labs, calc_pvals=False)
+        for k in range(K):
+            self.assertTrue(t_test_scores[k][0][1] >= 1)

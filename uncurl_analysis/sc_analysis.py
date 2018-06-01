@@ -18,43 +18,6 @@ import simplex_sample
 
 DIM_RED_OPTIONS = ['MDS', 'tSNE', 'TSVD', 'PCA', 'UMAP']
 
-class DiffExp(object):
-    """
-    This class represents all differential expression results for a given
-    dataset and set of labels.
-    """
-    def __init__(self, data_dir, base_name):
-        self.data_dir = data_dir
-        self.base_name = base_name
-        self.top_genes_f = os.path.join(data_dir, 'top_genes.txt')
-        self.has_top_genes = os.path.exists(self.top_genes_f)
-        self._top_genes = None
-
-        self.pvals_f = os.path.join(data_dir, 'gene_pvals.txt')
-        self.has_pvals = os.path.exists(self.pvals_f)
-        self._pvals = None
-
-        self.top_genes_1_vs_rest_f = os.path.join(data_dir, 'top_genes_1_vs_rest.txt')
-        self.has_top_genes_1_vs_rest = os.path.exists(self.top_genes_1_vs_rest_f)
-        self._top_genes_1_vs_rest = None
-        self.pvals_1_vs_rest_f = os.path.join(data_dir, 'gene_pvals_1_vs_rest.txt')
-        self.has_pvals_1_vs_rest = os.path.exists(self.pvals_1_vs_rest_f)
-        self._pvals_1_vs_rest = None
-
-        self.t_scores_f = os.path.join(data_dir, 't_scores.npy')
-        self.has_t_scores = os.path.exists(self.t_scores_f)
-        self._t_scores = None
-        self.t_pvals_f = os.path.join(data_dir, 't_pvals.npy')
-        self.has_t_pvals = os.path.exists(self.t_pvals_f)
-        self._t_pvals = None
-        self.separation_scores_f = os.path.join(data_dir, 'separation_scores.txt')
-        self.has_separation_scores = os.path.exists(self.separation_scores_f)
-        self._separation_scores = None
-        self.separation_genes_f = os.path.join(data_dir, 'separation_genes.txt')
-        self.has_separation_genes = os.path.exists(self.separation_genes_f)
-        self._separation_genes = None
-
-
 class SCAnalysis(object):
     """
     This class represents an ongoing single-cell RNA-Seq analysis.
@@ -133,6 +96,10 @@ class SCAnalysis(object):
         self.labels_f = os.path.join(data_dir, 'labels.txt')
         self.has_labels = os.path.exists(self.labels_f)
         self._labels = None
+
+        self.cluster_names_f = os.path.join(data_dir, 'cluster_names.txt')
+        self.has_cluster_names = os.path.exists(self.cluster_names_f)
+        self._cluster_names = None
 
         self.m_f = os.path.join(data_dir, 'm.txt')
         self.has_m = os.path.exists(self.m_f)
@@ -696,8 +663,19 @@ class SCAnalysis(object):
     def data_sampled_gene(self, gene_name):
         """
         Returns vector containing the expression levels for each cell for
-        the gene with the given name
+        the gene with the given name.
+
+        If gene_name contains a comma, then it's assumed that the input is
+        a list of gene names, and this will return the sum of the levels of
+        the input genes.
         """
+        if ',' in gene_name:
+            gene_names = gene_name.split(',')
+            data = self.data_sampled_gene(gene_names[0].strip())
+            for g in gene_names[1:]:
+                result = self.data_sampled_gene(g.strip())
+                data += result
+            return data
         gene_name_indices = np.where(self.gene_names == gene_name)[0]
         if len(gene_name_indices) == 0:
             return []
@@ -714,17 +692,17 @@ class SCAnalysis(object):
             else:
                 return data_gene.flatten()
 
-    # TODO
     @property
     def color_tracks(self):
         """
         Dict of color track name : tuple(is_discrete, filename)
         """
-        if self.has_color_tracks:
-            with open(self.color_tracks_f) as f:
-                self._color_tracks = json.load(f)
-        else:
-            self._color_tracks = {}
+        if self._color_tracks is None:
+            if self.has_color_tracks:
+                with open(self.color_tracks_f) as f:
+                    self._color_tracks = json.load(f)
+            else:
+                self._color_tracks = {}
         return self._color_tracks
 
     def add_color_track(self, color_track_name, color_data, is_discrete=False):
@@ -734,16 +712,24 @@ class SCAnalysis(object):
         If it's a discrete color track, should also bind differential
         expression to that color track.
         """
+        if is_discrete:
+            color_data = color_data.astype(str)
+        # make color_track_name safe
+        keep_chars = set(['-', '_', ' '])
+        color_track_name = ''.join([c for c in color_track_name if c.isalnum() or (c in keep_chars)])
+        color_track_filename = 'color_track_' + color_track_name[:20] + '.npy'
+        np.save(color_track_filename, color_data)
+        self.color_tracks[color_track_name] = (is_discrete, color_track_filename)
+        with open(self.color_tracks_f, 'w') as f:
+            json.dump(self.color_tracks, f)
 
     def get_color_track(self, color_track_name):
-        """
-        """
         if color_track_name in self.color_tracks:
             is_discrete, filename = self.color_tracks[color_track_name]
             if is_discrete:
-                data = np.loadtxt(filename, dtype=str)
+                data = np.load(filename)
             else:
-                data = np.loadtxt(filename)
+                data = np.load(filename)
             data = data[self.cell_subset][self.cell_sample]
             return data
         else:
@@ -754,6 +740,19 @@ class SCAnalysis(object):
         Returns all color track names
         """
         return list(self.color_tracks.keys())
+
+
+    def get_diffexp_color_track_names(self):
+        """
+        Returns list of color track names that can be used for differential
+        expression (discrete color tracks).
+        """
+        colors = []
+        for key, vals in self.color_tracks.items():
+            if vals[0]:
+                colors.append(key)
+        return colors
+
 
     def save_json_reset(self):
         """

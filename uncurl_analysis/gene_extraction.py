@@ -77,9 +77,11 @@ def find_overexpressed_genes_weighted(data, w, eps=0):
             eps)
     return scores
 
-def pairwise_t(data, w_or_labels, eps=1.0):
+def pairwise_t(data, w_or_labels, eps=1.0, calc_pvals=True):
     """
     Computes pairwise t-test between all pairs of clusters and all genes.
+
+    If calc_pvals is False, the pvals will be all 0.
     """
     data_csc = sparse.csc_matrix(data)
     genes, cells = data.shape
@@ -90,7 +92,8 @@ def pairwise_t(data, w_or_labels, eps=1.0):
                 data_csc.indptr,
                 w_or_labels,
                 cells,
-                genes)
+                genes,
+                calc_pvals)
     else:
         labels_array = np.zeros(len(w_or_labels), dtype=int)
         labels_map = {}
@@ -105,12 +108,15 @@ def pairwise_t(data, w_or_labels, eps=1.0):
                 labels_array,
                 cells,
                 genes,
-                eps)
+                eps,
+                calc_pvals)
     return scores, pvals
 
-def one_vs_rest_t(data, labels, eps=1.0):
+def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True):
     """
     Computes 1-vs-rest t-test for all clusters and genes.
+
+    If calc_pvals is False, the pvals will be all 0.
     """
     data_csc = sparse.csc_matrix(data)
     genes, cells = data.shape
@@ -127,7 +133,8 @@ def one_vs_rest_t(data, labels, eps=1.0):
             labels_array,
             cells,
             genes,
-            eps)
+            eps,
+            calc_pvals)
     return scores, pvals
 
 
