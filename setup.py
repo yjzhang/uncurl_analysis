@@ -21,6 +21,7 @@ install_requires = [
         'scikit-learn',
         'requests',
         'umap-learn',
+        'tables'
 ]
 
 setup(
