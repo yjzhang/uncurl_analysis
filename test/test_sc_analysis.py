@@ -52,7 +52,7 @@ class SCAnalysisTest(TestCase):
         self.assertTrue(os.path.exists(sca.w_f))
         self.assertTrue(os.path.exists(sca.m_f))
         print(nmi(sca.labels, self.labs))
-        self.assertTrue(nmi(sca.labels, self.labs) > 0.7)
+        self.assertTrue(nmi(sca.labels, self.labs) > 0.65)
 
     def test_dim_red_sample(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,

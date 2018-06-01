@@ -8,7 +8,7 @@ from scipy import sparse
 import uncurl
 from uncurl.sparse_utils import symmetric_kld
 
-from . import gene_extraction, relabeling
+from . import gene_extraction, relabeling, sparse_matrix_h5
 from .entropy import entropy
 
 from sklearn.decomposition import PCA, TruncatedSVD
@@ -17,6 +17,43 @@ from sklearn.manifold import TSNE, MDS
 import simplex_sample
 
 DIM_RED_OPTIONS = ['MDS', 'tSNE', 'TSVD', 'PCA', 'UMAP']
+
+class DiffExp(object):
+    """
+    This class represents all differential expression results for a given
+    dataset and set of labels.
+    """
+    def __init__(self, data_dir, base_name):
+        self.data_dir = data_dir
+        self.base_name = base_name
+        self.top_genes_f = os.path.join(data_dir, 'top_genes.txt')
+        self.has_top_genes = os.path.exists(self.top_genes_f)
+        self._top_genes = None
+
+        self.pvals_f = os.path.join(data_dir, 'gene_pvals.txt')
+        self.has_pvals = os.path.exists(self.pvals_f)
+        self._pvals = None
+
+        self.top_genes_1_vs_rest_f = os.path.join(data_dir, 'top_genes_1_vs_rest.txt')
+        self.has_top_genes_1_vs_rest = os.path.exists(self.top_genes_1_vs_rest_f)
+        self._top_genes_1_vs_rest = None
+        self.pvals_1_vs_rest_f = os.path.join(data_dir, 'gene_pvals_1_vs_rest.txt')
+        self.has_pvals_1_vs_rest = os.path.exists(self.pvals_1_vs_rest_f)
+        self._pvals_1_vs_rest = None
+
+        self.t_scores_f = os.path.join(data_dir, 't_scores.npy')
+        self.has_t_scores = os.path.exists(self.t_scores_f)
+        self._t_scores = None
+        self.t_pvals_f = os.path.join(data_dir, 't_pvals.npy')
+        self.has_t_pvals = os.path.exists(self.t_pvals_f)
+        self._t_pvals = None
+        self.separation_scores_f = os.path.join(data_dir, 'separation_scores.txt')
+        self.has_separation_scores = os.path.exists(self.separation_scores_f)
+        self._separation_scores = None
+        self.separation_genes_f = os.path.join(data_dir, 'separation_genes.txt')
+        self.has_separation_genes = os.path.exists(self.separation_genes_f)
+        self._separation_genes = None
+
 
 class SCAnalysis(object):
     """
@@ -70,7 +107,7 @@ class SCAnalysis(object):
             self.data_f = df4
 
         self.data_sampled_all_genes_f = os.path.join(data_dir,
-                'data_sampled_all_genes.mtx')
+                'data_sampled_all_genes.h5')
         self.has_data_sampled_all_genes = os.path.exists(self.data_sampled_all_genes_f)
         self._data_sampled_all_genes = None
 
@@ -164,6 +201,15 @@ class SCAnalysis(object):
         self.entropy_f = os.path.join(data_dir, 'entropy.txt')
         self.has_entropy = os.path.exists(self.entropy_f)
         self._entropy = None
+
+        # externally loaded color tracks
+        self.color_tracks_f = os.path.join(data_dir, 'color_tracks.json')
+        self.has_color_tracks = os.path.exists(self.color_tracks_f)
+        # dict of color tracks to (is_discrete, filename)
+        self._color_tracks = None
+
+        # dict of color map to differential expression results
+        self.color_track_diffexp = None
 
         # dict of output_name : running time
         self.profiling = {}
@@ -405,10 +451,11 @@ class SCAnalysis(object):
         if self._data_sampled_all_genes is None:
             if not self.has_data_sampled_all_genes:
                 self._data_sampled_all_genes = self.data[:, self.cell_subset][:, self.cell_sample]
-                scipy.io.mmwrite(self.data_sampled_all_genes_f,
-                        self._data_sampled_all_genes)
+                sparse_matrix_h5.store_matrix(self._data_sampled_all_genes,
+                        self.data_sampled_all_genes_f)
             else:
-                self._data_sampled_all_genes = scipy.io.mmread(self.data_sampled_all_genes_f)
+                self._data_sampled_all_genes = sparse_matrix_h5.load_matrix(
+                        self.data_sampled_all_genes_f)
                 self._data_sampled_all_genes = sparse.csc_matrix(self._data_sampled_all_genes)
         return self._data_sampled_all_genes
 
@@ -651,13 +698,62 @@ class SCAnalysis(object):
         Returns vector containing the expression levels for each cell for
         the gene with the given name
         """
-        gene_name_indices = (self.gene_names == gene_name)
-        data = self.data_sampled_all_genes
-        data_gene = data[gene_name_indices, :]
-        if sparse.issparse(data_gene):
-            return data_gene.toarray().flatten()
+        gene_name_indices = np.where(self.gene_names == gene_name)[0]
+        if len(gene_name_indices) == 0:
+            return []
+        gene_index = gene_name_indices[0]
+        if os.path.exists(self.data_sampled_all_genes_f):
+            return sparse_matrix_h5.load_row(
+                    self.data_sampled_all_genes_f,
+                    gene_index)
         else:
-            return data_gene.flatten()
+            data = self.data_sampled_all_genes
+            data_gene = data[gene_name_indices, :]
+            if sparse.issparse(data_gene):
+                return data_gene.toarray().flatten()
+            else:
+                return data_gene.flatten()
+
+    # TODO
+    @property
+    def color_tracks(self):
+        """
+        Dict of color track name : tuple(is_discrete, filename)
+        """
+        if self.has_color_tracks:
+            with open(self.color_tracks_f) as f:
+                self._color_tracks = json.load(f)
+        else:
+            self._color_tracks = {}
+        return self._color_tracks
+
+    def add_color_track(self, color_track_name, color_data, is_discrete=False):
+        """
+        Adds an external color track to the analysis, for viewing.
+
+        If it's a discrete color track, should also bind differential
+        expression to that color track.
+        """
+
+    def get_color_track(self, color_track_name):
+        """
+        """
+        if color_track_name in self.color_tracks:
+            is_discrete, filename = self.color_tracks[color_track_name]
+            if is_discrete:
+                data = np.loadtxt(filename, dtype=str)
+            else:
+                data = np.loadtxt(filename)
+            data = data[self.cell_subset][self.cell_sample]
+            return data
+        else:
+            return None
+
+    def get_color_track_names(self):
+        """
+        Returns all color track names
+        """
+        return list(self.color_tracks.keys())
 
     def save_json_reset(self):
         """
