@@ -175,6 +175,8 @@ class SCAnalysis(object):
         # dict of color tracks to (is_discrete, filename)
         self._color_tracks = None
 
+        self._color_tracks_cache = {}
+
         # dict of color map to differential expression results
         self.color_track_diffexp = None
 
@@ -724,6 +726,13 @@ class SCAnalysis(object):
             json.dump(self.color_tracks, f)
 
     def get_color_track(self, color_track_name):
+        if not hasattr(self, '_color_tracks_cache'):
+            self._color_tracks_cache = {}
+        try:
+            data, is_discrete = self._color_tracks_cache[color_track_name]
+            return data, is_discrete
+        except:
+            pass
         if color_track_name in self.color_tracks:
             is_discrete, filename = self.color_tracks[color_track_name]
             if is_discrete:
@@ -731,7 +740,8 @@ class SCAnalysis(object):
             else:
                 data = np.load(filename)
             data = data[self.cell_subset][self.cell_sample]
-            return data
+            self._color_tracks_cache[color_track_name] = (data, is_discrete)
+            return data, is_discrete
         else:
             return None
 
@@ -752,6 +762,20 @@ class SCAnalysis(object):
             if vals[0]:
                 colors.append(key)
         return colors
+
+    def calculate_diffexp(self, color_track_name, color_track_val):
+        """
+        Calculates 1 vs rest differential expression for a custom
+        color track.
+        """
+        color_track, is_discrete = self.get_color_track(color_track_name)
+        if not is_discrete:
+            return None
+        data = self.data_sampled_all_genes
+        scores, pvals = gene_extraction.one_vs_rest_t(data, color_track,
+                    eps=float(5*len(set(color_track)))/data.shape[1],
+                    calc_pvals=False)
+        return scores
 
 
     def save_json_reset(self):
