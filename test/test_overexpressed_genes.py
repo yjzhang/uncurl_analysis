@@ -75,7 +75,7 @@ class OverexpressedGenesTest(TestCase):
         K = len(set(self.labs))
         genes, cells = self.data.shape
         self.assertEqual(len(t_test_scores), K)
-        for k in range(K):
+        for k in set(self.labs):
             print(k)
             print(t_test_scores[k][:10])
             print(t_test_p_vals[k][:10])
@@ -87,5 +87,5 @@ class OverexpressedGenesTest(TestCase):
             self.assertTrue((pvals <= 1).all())
             self.assertTrue((cscores >= 0).all())
         t_test_scores, _ = one_vs_rest_t(self.data, self.labs, calc_pvals=False)
-        for k in range(K):
+        for k in set(self.labs):
             self.assertTrue(t_test_scores[k][0][1] >= 1)

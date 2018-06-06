@@ -121,6 +121,7 @@ def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True):
     data_csc = sparse.csc_matrix(data)
     genes, cells = data.shape
     labels_array = np.zeros(len(labels), dtype=int)
+    # map from label names to indices
     labels_map = {}
     for i, l in enumerate(sorted(list(set(labels)))):
         labels_map[l] = i
@@ -135,7 +136,13 @@ def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True):
             genes,
             eps,
             calc_pvals)
-    return scores, pvals
+    # map back to original label set?
+    new_scores = {}
+    new_pvals = {}
+    for l, i in labels_map.items():
+        new_scores[l] = scores[i]
+        new_pvals[l] = pvals[i]
+    return new_scores, new_pvals
 
 
 def c_scores_from_t(scores, pvals):

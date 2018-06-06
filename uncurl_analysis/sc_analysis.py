@@ -711,8 +711,7 @@ class SCAnalysis(object):
         """
         Adds an external color track to the analysis, for viewing.
 
-        If it's a discrete color track, should also bind differential
-        expression to that color track.
+        color_data is a 1d numpy array.
         """
         if is_discrete:
             color_data = color_data.astype(str)
@@ -763,7 +762,8 @@ class SCAnalysis(object):
                 colors.append(key)
         return colors
 
-    def calculate_diffexp(self, color_track_name, color_track_val):
+
+    def calculate_diffexp(self, color_track_name):
         """
         Calculates 1 vs rest differential expression for a custom
         color track.
@@ -772,6 +772,7 @@ class SCAnalysis(object):
         if not is_discrete:
             return None
         data = self.data_sampled_all_genes
+        # TODO: convert color track to ints
         scores, pvals = gene_extraction.one_vs_rest_t(data, color_track,
                     eps=float(5*len(set(color_track)))/data.shape[1],
                     calc_pvals=False)

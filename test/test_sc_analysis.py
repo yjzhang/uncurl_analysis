@@ -109,11 +109,15 @@ class SCAnalysisTest(TestCase):
         sca.run_full_analysis()
         self.assertTrue(sca.has_dim_red)
         self.assertTrue(sca.has_pvals)
+        self.assertTrue(sca.has_top_genes_1_vs_rest)
         self.assertTrue(sca.has_top_genes)
         self.assertTrue(sca.has_baseline_vis)
         top_genes = sca.top_genes
         self.assertEqual(len(top_genes), 8)
         self.assertEqual(len(top_genes[0]), sca.data.shape[0])
+        top_genes_1_vs_rest = sca.top_genes_1_vs_rest
+        self.assertEqual(len(top_genes_1_vs_rest), 8)
+        self.assertEqual(len(top_genes_1_vs_rest[0]), sca.data.shape[0])
         self.assertEqual(sca.dim_red.shape[0], 2)
 
     def test_json(self):
@@ -167,6 +171,26 @@ class SCAnalysisTest(TestCase):
                 inner_max_iters=10)
         gene_info = sca.data_sampled_gene('AGRN')
         self.assertEqual(gene_info.shape[0], sca.data_sampled_all_genes.shape[1])
+
+    def test_add_color_track(self):
+        sca = sc_analysis.SCAnalysis(self.data_dir,
+                clusters=8,
+                data_filename='data.mtx',
+                baseline_dim_red='tsvd',
+                dim_red_option='MDS',
+                cell_frac=1.0,
+                max_iters=20,
+                inner_max_iters=10)
+        sca.add_color_track('true_labels', self.labs, is_discrete=True)
+        true_labels, _ = sca.get_color_track('true_labels')
+        self.assertTrue(nmi(true_labels, self.labs) > 0.99)
+        top_genes = sca.calculate_diffexp('true_labels')
+        self.assertEqual(len(top_genes), 8)
+        sca.add_color_track('true_labels_2', self.labs, is_discrete=False)
+        true_labels_2, _ = sca.get_color_track('true_labels_2')
+        self.assertTrue((true_labels_2.astype(int) == self.labs).all())
+
+
 
     """
     def test_merge_cluster(self):
