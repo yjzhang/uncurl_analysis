@@ -171,7 +171,6 @@ class SCAnalysis(object):
 
         # externally loaded color tracks
         self.color_tracks_f = os.path.join(data_dir, 'color_tracks.json')
-        self.has_color_tracks = os.path.exists(self.color_tracks_f)
         # dict of color tracks to (is_discrete, filename)
         self._color_tracks = None
 
@@ -700,7 +699,7 @@ class SCAnalysis(object):
         Dict of color track name : tuple(is_discrete, filename)
         """
         if self._color_tracks is None:
-            if self.has_color_tracks:
+            if os.path.exists(self.color_tracks_f):
                 with open(self.color_tracks_f) as f:
                     self._color_tracks = json.load(f)
             else:
@@ -719,6 +718,7 @@ class SCAnalysis(object):
         keep_chars = set(['-', '_', ' '])
         color_track_name = ''.join([c for c in color_track_name if c.isalnum() or (c in keep_chars)])
         color_track_filename = 'color_track_' + color_track_name[:20] + '.npy'
+        color_track_filename = os.path.join(self.data_dir, color_track_filename)
         np.save(color_track_filename, color_data)
         self.color_tracks[color_track_name] = (is_discrete, color_track_filename)
         with open(self.color_tracks_f, 'w') as f:
@@ -748,6 +748,7 @@ class SCAnalysis(object):
         """
         Returns all color track names
         """
+        print(self.color_tracks)
         return list(self.color_tracks.keys())
 
 
