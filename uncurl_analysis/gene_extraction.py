@@ -110,6 +110,7 @@ def pairwise_t(data, w_or_labels, eps=1.0, calc_pvals=True):
                 genes,
                 eps,
                 calc_pvals)
+        # TODO: re-map keys? or would that mess up the c-score calculation?
     return scores, pvals
 
 def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True):
@@ -139,9 +140,9 @@ def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True):
     # map back to original label set?
     new_scores = {}
     new_pvals = {}
-    for l, i in labels_map.items():
-        new_scores[l] = scores[i]
-        new_pvals[l] = pvals[i]
+    for i, l in labels_map.items():
+        new_scores[i] = scores[l]
+        new_pvals[i] = pvals[l]
     return new_scores, new_pvals
 
 

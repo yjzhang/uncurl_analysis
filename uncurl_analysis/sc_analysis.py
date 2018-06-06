@@ -553,10 +553,14 @@ class SCAnalysis(object):
                     data = self.data[:, self.cell_subset]
                     w = self.w
                 labels = w.argmax(0)
+                # this is due to a really bizarre up bug with json in python 3
+                labels = labels.tolist()
                 # TODO: have some option for eps?
                 self._top_genes_1_vs_rest, self._pvals_1_vs_rest = gene_extraction.one_vs_rest_t(
                         data, labels,
                         eps=float(5*len(set(labels)))/data.shape[1])
+                print(self._top_genes_1_vs_rest.keys())
+                print(self._pvals_1_vs_rest.keys())
                 with open(self.top_genes_1_vs_rest_f, 'w') as f:
                     json.dump(self._top_genes_1_vs_rest, f)
                 with open(self.pvals_1_vs_rest_f, 'w') as f:
