@@ -18,6 +18,18 @@ import simplex_sample
 
 DIM_RED_OPTIONS = ['MDS', 'tSNE', 'TSVD', 'PCA', 'UMAP']
 
+class SimpleEncoder(json.JSONEncoder):
+
+    def default(self, o):
+        if isinstance(o, np.integer):
+            return int(o)
+        elif isinstance(o, np.floating):
+            return float(o)
+        elif isinstance(o, np.ndarray):
+            return o.tolist()
+        return json.JSONEncoder.default(self, o)
+
+
 class SCAnalysis(object):
     """
     This class represents an ongoing single-cell RNA-Seq analysis.
@@ -562,9 +574,11 @@ class SCAnalysis(object):
                 print(self._top_genes_1_vs_rest.keys())
                 print(self._pvals_1_vs_rest.keys())
                 with open(self.top_genes_1_vs_rest_f, 'w') as f:
-                    json.dump(self._top_genes_1_vs_rest, f)
+                    json.dump(self._top_genes_1_vs_rest, f,
+                            cls=SimpleEncoder)
                 with open(self.pvals_1_vs_rest_f, 'w') as f:
-                    json.dump(self._pvals_1_vs_rest, f)
+                    json.dump(self._pvals_1_vs_rest, f,
+                            cls=SimpleEncoder)
                 self.has_top_genes_1_vs_rest = True
                 self.has_pvals_1_vs_rest = True
                 self.profiling['top_genes_1_vs_rest'] = time.time() - t
@@ -626,9 +640,11 @@ class SCAnalysis(object):
                 self._top_genes, self._pvals = gene_extraction.c_scores_from_t(
                         self.t_scores, self.t_pvals)
                 with open(self.top_genes_f, 'w') as f:
-                    json.dump(self._top_genes, f)
+                    json.dump(self._top_genes, f,
+                            cls=SimpleEncoder)
                 with open(self.pvals_f, 'w') as f:
-                    json.dump(self._pvals, f)
+                    json.dump(self._pvals, f,
+                            cls=SimpleEncoder)
                 self.has_top_genes = True
                 self.has_pvals = True
         if 0 not in self._top_genes.keys():
@@ -726,7 +742,8 @@ class SCAnalysis(object):
         np.save(color_track_filename, color_data)
         self.color_tracks[color_track_name] = (is_discrete, color_track_filename)
         with open(self.color_tracks_f, 'w') as f:
-            json.dump(self.color_tracks, f)
+            json.dump(self.color_tracks, f,
+                    cls=SimpleEncoder)
 
     def get_color_track(self, color_track_name):
         if not hasattr(self, '_color_tracks_cache'):
@@ -816,7 +833,8 @@ class SCAnalysis(object):
         self._entropy = None
         self._separation_genes = None
         with open(self.json_f, 'w') as f:
-            json.dump(self.__dict__, f)
+            json.dump(self.__dict__, f,
+                    cls=SimpleEncoder)
 
 
     def recluster(self, split_or_merge='split',
@@ -900,6 +918,26 @@ class SCAnalysis(object):
         self.has_separation_scores = False
         self._separation_scores = None
         self.separation_scores
+
+    def get_data_subset(self, cell_ids):
+        """
+        Returns a data matrix only consisting of the given cells
+        (but all genes).
+        """
+        data_subset = self.data_sampled_all_genes[:, cell_ids]
+        return sparse.csc_matrix(data_subset)
+
+    def get_clusters_subset(self, cluster_ids):
+        """
+        Returns a data matrix only consisting of the given clusters
+        (but all genes).
+        """
+        cell_ids = np.zeros(len(self.labels), dtype=bool)
+        for cluster in self.cluster_ids:
+            cell_ids = cell_ids | (self.labels == cluster)
+        data_subset = self._data_sampled_all_genes[:, cell_ids]
+        return sparse.csc_matrix(data_subset)
+
 
     def load_params_from_folder(self):
         """
