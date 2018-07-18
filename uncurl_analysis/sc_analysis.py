@@ -933,9 +933,9 @@ class SCAnalysis(object):
         (but all genes).
         """
         cell_ids = np.zeros(len(self.labels), dtype=bool)
-        for cluster in self.cluster_ids:
+        for cluster in cluster_ids:
             cell_ids = cell_ids | (self.labels == cluster)
-        data_subset = self._data_sampled_all_genes[:, cell_ids]
+        data_subset = self.data_sampled_all_genes[:, cell_ids]
         return sparse.csc_matrix(data_subset)
 
 
