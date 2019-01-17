@@ -217,6 +217,12 @@ class SCAnalysis(object):
             return self._data
 
     @property
+    def init(self):
+        """
+        """
+        # TODO: initialization - use qualNorm
+
+    @property
     def gene_subset(self):
         """
         Gene subset (from max_variance_genes)
@@ -681,7 +687,7 @@ class SCAnalysis(object):
                 self.has_entropy = True
         return self._entropy
 
-    def data_sampled_gene(self, gene_name):
+    def data_sampled_gene(self, gene_name, use_mw=False):
         """
         Returns vector containing the expression levels for each cell for
         the gene with the given name.
@@ -690,28 +696,36 @@ class SCAnalysis(object):
         a list of gene names, and this will return the sum of the levels of
         the input genes.
         """
+        # TODO: add an option to use MW instead of the original data.
         if ',' in gene_name:
             gene_names = gene_name.split(',')
             data = self.data_sampled_gene(gene_names[0].strip())
             for g in gene_names[1:]:
-                result = self.data_sampled_gene(g.strip())
+                result = self.data_sampled_gene(g.strip(), use_mw)
                 data += result
             return data
         gene_name_indices = np.where(self.gene_names == gene_name)[0]
         if len(gene_name_indices) == 0:
             return []
         gene_index = gene_name_indices[0]
-        if os.path.exists(self.data_sampled_all_genes_f):
-            return sparse_matrix_h5.load_row(
-                    self.data_sampled_all_genes_f,
-                    gene_index)
+        if use_mw:
+            # we re-calculate the matrix multiplication every time...
+            # and use caching to store the values???
+            m = self.m_sampled
+            w = self.w_sampled
+            return m[gene_index,:].dot(w).flatten()
         else:
-            data = self.data_sampled_all_genes
-            data_gene = data[gene_name_indices, :]
-            if sparse.issparse(data_gene):
-                return data_gene.toarray().flatten()
+            if os.path.exists(self.data_sampled_all_genes_f):
+                return sparse_matrix_h5.load_row(
+                        self.data_sampled_all_genes_f,
+                        gene_index)
             else:
-                return data_gene.flatten()
+                data = self.data_sampled_all_genes
+                data_gene = data[gene_name_indices, :]
+                if sparse.issparse(data_gene):
+                    return data_gene.toarray().flatten()
+                else:
+                    return data_gene.flatten()
 
     @property
     def color_tracks(self):
