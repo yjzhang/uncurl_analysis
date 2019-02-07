@@ -68,18 +68,20 @@ class SCAnalysis(object):
         self._data_subset = None
         self._data_normalized = None
 
-        df1 = os.path.join(data_dir, 'data.mtx')
-        df2 = os.path.join(data_dir, 'data.mtx.gz')
-        df3 = os.path.join(data_dir, 'data.txt')
-        df4 = os.path.join(data_dir, 'data.txt.gz')
-        if os.path.exists(df1):
-            self.data_f = df1
-        elif os.path.exists(df2):
-            self.data_f = df2
-        elif os.path.exists(df3):
-            self.data_f = df3
-        elif os.path.exists(df4):
-            self.data_f = df4
+        if not os.path.exists(self.data_f):
+            df1 = os.path.join(data_dir, 'data.mtx')
+            df2 = os.path.join(data_dir, 'data.mtx.gz')
+            df3 = os.path.join(data_dir, 'data.txt')
+            df4 = os.path.join(data_dir, 'data.txt.gz')
+            if os.path.exists(df1):
+                self.data_f = df1
+            elif os.path.exists(df2):
+                self.data_f = df2
+            elif os.path.exists(df3):
+                self.data_f = df3
+            elif os.path.exists(df4):
+                self.data_f = df4
+        print(self.data_f)
 
         self.data_sampled_all_genes_f = os.path.join(data_dir,
                 'data_sampled_all_genes.h5')
@@ -204,6 +206,9 @@ class SCAnalysis(object):
         (genes, cells)
         """
         if self._data is None:
+            # fffff this is a python3/python2 thing
+            self.data_f = str(self.data_f)
+            print('loading data:', self.data_f)
             try:
                 if self.is_sparse:
                     self._data = scipy.io.mmread(self.data_f)
@@ -211,7 +216,8 @@ class SCAnalysis(object):
                 else:
                     self._data = np.loadtxt(self.data_f)
                 return self._data
-            except:
+            except Exception as e:
+                print('Could not load data:', e)
                 return None
         else:
             return self._data
