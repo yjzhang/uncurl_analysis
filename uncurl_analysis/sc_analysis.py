@@ -285,7 +285,8 @@ class SCAnalysis(object):
         """
         if self._data_subset is None:
             data = self.data_normalized
-            self._data_subset = data[np.ix_(self.gene_subset, self.cell_subset)]
+            data_gene_subset = data[self.gene_subset, :]
+            self._data_subset = data_gene_subset[:, self.cell_subset]
         return self._data_subset
 
 
