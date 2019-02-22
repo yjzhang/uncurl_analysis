@@ -901,6 +901,7 @@ class SCAnalysis(object):
         self.pvals
         self.entropy
         self.separation_scores
+        self.data_sampled_all_genes
 
     def run_post_analysis(self):
         """
