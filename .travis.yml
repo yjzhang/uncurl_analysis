@@ -3,7 +3,7 @@ sudo: enabled
 python:
     - 2.7
     - 3.6
-before-install:
+before_install:
     - sudo apt-get install -y libhdf5-dev
 install: 
     - pip install cython
