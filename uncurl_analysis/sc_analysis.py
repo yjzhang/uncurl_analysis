@@ -88,6 +88,9 @@ class SCAnalysis(object):
         self.has_data_sampled_all_genes = os.path.exists(self.data_sampled_all_genes_f)
         self._data_sampled_all_genes = None
 
+        self.init_f = os.path.join(data_dir, 'init.txt')
+        self.has_init = os.path.exists(self.init_f)
+        self._init = None
 
         self.gene_names_f = os.path.join(data_dir, 'gene_names.txt')
         self._gene_names = None
@@ -225,8 +228,16 @@ class SCAnalysis(object):
     @property
     def init(self):
         """
+        Initialization matrix...
         """
-        # TODO: initialization - use qualNorm
+        if self._init is None:
+            if not self.has_init:
+                return None
+            else:
+                self._init = np.loadtxt(self.init_f)
+                return self._init
+        else:
+            return self._init
 
     @property
     def gene_subset(self):
@@ -313,8 +324,14 @@ class SCAnalysis(object):
         Runs uncurl on self.data_subset.
         """
         t = time.time()
+        init = None
+        if self.has_init:
+            init = self.init
+            # TODO: run qualNorm
+            init = uncurl.qualNorm(self.data_subset, init)
         m, w, ll = uncurl.run_state_estimation(self.data_subset,
                 clusters=self.clusters,
+                init_means=init,
                 **self.uncurl_kwargs)
         np.savetxt(self.w_f, w)
         np.savetxt(self.m_f, m)
@@ -347,7 +364,9 @@ class SCAnalysis(object):
     @property
     def w_sampled(self):
         if not self.has_w_sampled:
-            return self.w[:, self.cell_sample]
+            w_sampled = self.w[:, self.cell_sample]
+            # TODO: should we catch this result? is it worthwhile?
+            return w_sampled
         else:
             if self._w_sampled is None:
                 self._w_sampled = np.loadtxt(self.w_sampled_f)
