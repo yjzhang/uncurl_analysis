@@ -28,13 +28,23 @@ class DiffexpTest(unittest.TestCase):
         all_pvs, all_ratios = poisson_diffexp.uncurl_poisson_test_1_vs_rest(m, w)
         all_pvs = np.array(all_pvs)
         all_ratios = np.array(all_ratios)
-        self.assertEqual(all_pvs.shape, (data.shape[0], 8))
         self.assertTrue((all_pvs < 0.05).sum() > 100)
-        self.assertTrue((all_pvs < 0.05).sum() < data.shape[1])
         self.assertTrue((all_ratios > 10).sum() > 100)
+        self.assertEqual(all_pvs.shape, (data.shape[0], 8))
         all_pvs, all_ratios = poisson_diffexp.uncurl_poisson_test_1_vs_rest(m, w, mode='counts')
         all_pvs = np.array(all_pvs)
         all_ratios = np.array(all_ratios)
+        self.assertEqual(all_pvs.shape, (data.shape[0], 8))
+        self.assertTrue((all_pvs < 0.01).sum() > 100)
+        self.assertTrue((all_pvs < 0.01).sum() < data.shape[0])
+        self.assertTrue((all_ratios > 10).sum() > 100)
+        # test pairwise
+        all_pvs, all_ratios = poisson_diffexp.uncurl_poisson_test_pairwise(m, w, mode='counts')
+        self.assertEqual(all_pvs.shape, (data.shape[0], 8, 8))
+        self.assertEqual(all_ratios.shape, (data.shape[0], 8, 8))
+        self.assertTrue((all_pvs < 0.001).sum() < data.shape[0])
+        self.assertTrue((all_pvs < 0.01).sum() > 100)
+
 
 if __name__ == '__main__':
     unittest.main()
