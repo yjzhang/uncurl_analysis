@@ -11,6 +11,9 @@ extensions = [
     Extension('uncurl_analysis.sparse_bulk_data',
              ['uncurl_analysis/sparse_bulk_data.pyx'],
              extra_compile_args=['-O3', '-ffast-math']),
+    Extension('uncurl_analysis.poisson_tests',
+             ['uncurl_analysis/poisson_tests.pyx'],
+             extra_compile_args=['-O3', '-ffast-math']),
 ]
 
 install_requires = [
