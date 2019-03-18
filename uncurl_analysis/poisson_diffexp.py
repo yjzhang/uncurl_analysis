@@ -7,76 +7,7 @@
 import numpy as np
 import scipy.stats
 import scipy.special
-from uncurl_analysis.poisson_tests import log_wald_poisson_test, uncurl_poisson_test_1_vs_rest
-
-def uncurl_poisson_test_pairwise(m, w, mode='counts'):
-    """
-    Pairwise Poisson tests between all clusters.
-
-    Returns:
-        all_pvs, all_ratios: two arrays of shape (genes, k, k) indicating the
-        p-values between two clusters.
-    """
-    # TODO
-    clusters = w.argmax(0)
-    genes = m.shape[0]
-    cells = w.shape[1]
-    all_pvs = []
-    all_ratios = []
-    cluster_cell_counts = None
-    # TODO: how to use this mode...?
-    if mode == 'counts':
-        cell_counts = np.zeros(cells)
-        cluster_cell_counts = np.zeros(w.shape[0])
-        for i in range(cells):
-            cell_counts[i] = np.sum(m.dot(w[:,i]))
-        for k in range(w.shape[0]):
-            cluster_cell_counts[k] = cell_counts[clusters==k].sum()
-    for g in range(genes):
-        pvs, ratios = uncurl_poisson_gene_pairwise(m, w, clusters, g, cluster_cell_counts)
-        all_pvs.append(pvs)
-        all_ratios.append(ratios)
-    return np.array(all_pvs), np.array(all_ratios)
-
-def uncurl_poisson_gene_pairwise(m, w, clusters, gene_index, cell_counts=None):
-    """
-    Calculates gene expression ratio and p-val for one gene and all pairs of clusters
-    using the Log-Wald test.
-
-    Args:
-        m (genes x k array)
-        w (k x cells array)
-        clusters (array of cluster indices for all cells)
-        gene_index (int): gene to test
-        cell_counts (array of dim clusters): total cell counts for each cluster
-
-    Returns:
-        pvs, ratios: two arrays of shape (k, k)
-    """
-    n_clusters = w.shape[0]
-    gene_matrix = np.dot(m[gene_index, :], w)
-    cluster_pvs = np.zeros((n_clusters, n_clusters))
-    cluster_ratios = np.zeros((n_clusters, n_clusters))
-    all_cluster_cells = []
-    for k in range(n_clusters):
-        all_cluster_cells.append((clusters == k))
-    for k1 in range(n_clusters):
-        cluster_cells = all_cluster_cells[k1]
-        in_cluster = gene_matrix[cluster_cells]
-        if len(in_cluster) == 0:
-            pass
-        for k2 in range(n_clusters):
-            cluster_cells_2 = all_cluster_cells[k2]
-            in_cluster_2 = gene_matrix[cluster_cells_2]
-            if cell_counts is not None:
-                counts1 = cell_counts[k1]
-                counts2 = cell_counts[k2]
-                pv, ratio = log_wald_poisson_test(in_cluster, in_cluster_2, counts1, counts2)
-            else:
-                pv, ratio = log_wald_poisson_test(in_cluster, in_cluster_2)
-            cluster_pvs[k1, k2] = pv
-            cluster_ratios[k1, k2] = ratio
-    return cluster_pvs, cluster_ratios
+from uncurl_analysis.poisson_tests import log_wald_poisson_test, uncurl_poisson_test_1_vs_rest, uncurl_poisson_test_pairwise
 
 def c_scores_from_pv_ratios(all_pvs, all_ratios):
     """

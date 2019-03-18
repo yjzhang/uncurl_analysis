@@ -1,5 +1,9 @@
 import unittest
+
 import numpy as np
+import scipy.io
+import uncurl
+
 from uncurl_analysis import poisson_diffexp
 
 class DiffexpTest(unittest.TestCase):
@@ -14,9 +18,7 @@ class DiffexpTest(unittest.TestCase):
         print('pv: ', pv, ' ratio: ', ratio)
         self.assertTrue(pv < 0.1)
 
-    def test_real_data(self):
-        import scipy.io
-        import uncurl
+    def test_real_data_1_vs_rest(self):
         mat = scipy.io.loadmat('data/10x_pooled_400.mat')
         data = mat['data']
         # do uncurl, followed by update_m
@@ -38,6 +40,15 @@ class DiffexpTest(unittest.TestCase):
         self.assertTrue((all_pvs < 0.01).sum() > 100)
         self.assertTrue((all_pvs < 0.01).sum() < data.shape[0])
         self.assertTrue((all_ratios > 10).sum() > 100)
+
+    def test_real_data_pairwise(self):
+        mat = scipy.io.loadmat('data/10x_pooled_400.mat')
+        data = mat['data']
+        # do uncurl, followed by update_m
+        selected_genes = uncurl.max_variance_genes(data)
+        data_subset = data[selected_genes, :]
+        m, w, ll = uncurl.run_state_estimation(data_subset, 8, max_iters=20, inner_max_iters=50)
+        m = uncurl.update_m(data, m, w, selected_genes)
         # test pairwise
         all_pvs, all_ratios = poisson_diffexp.uncurl_poisson_test_pairwise(m, w, mode='counts')
         self.assertEqual(all_pvs.shape, (data.shape[0], 8, 8))
