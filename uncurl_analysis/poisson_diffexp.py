@@ -5,9 +5,45 @@
 # https://bmcsystbiol.biomedcentral.com/articles/10.1186/1752-0509-5-S3-S1
 
 import numpy as np
-import scipy.stats
-import scipy.special
 from uncurl_analysis.poisson_tests import log_wald_poisson_test, uncurl_poisson_test_1_vs_rest, uncurl_poisson_test_pairwise
+
+# TODO: poisson test with pre-defined group?
+def poisson_test_known_groups(data, groups, test_mode='pairwise',
+        mode='counts', m=None, w=None):
+    """
+    Given a list of known groups, one for each cell: this runs uncurl-based Poisson diffexp
+    on.
+
+    Args:
+        data (dense or sparse array): shape is (genes, cells)
+        groups (1d array or list): int or string for each cell, indicating groups
+        test_mode (str): 'pairwise' or '1_vs_rest'. Default: 'pairwise'
+        mode (str): 'counts' or 'cells'
+
+    Returns:
+        all_pvs, all_ratios, clusters_to_groups
+        all_pvs and all_ratios are arrays. If mode is 'pairwise', arrays are of shape (genes, k, k).
+        Otherwise, arrays are of shape (genes, k).
+        clusters_to_groups is a dict of cluster id to group name.
+    """
+    import uncurl
+    groups_list = sorted(list(set(groups)))
+    groups_to_clusters = {x: i for i, x in enumerate(groups_list)}
+    clusters_to_groups = {i: x for i, x in enumerate(groups_list)}
+    clusters = np.array([groups_to_clusters[i] for i in groups])
+    # initialize uncurl...
+    # should we select a gene subset to do uncurl??? nah...
+    if m is None and w is None:
+        m, w, ll = uncurl.poisson_estimate_state(data, len(groups_list), init_weights=clusters,
+                max_assign_weight=1.0, run_w_first=False, max_iters=10, inner_max_iters=100)
+    # now we can use poisson test
+    if test_mode == 'pairwise':
+        all_pvs, all_ratios = uncurl_poisson_test_pairwise(m, w, mode=mode, clusters=clusters)
+        return all_pvs, all_ratios, clusters_to_groups
+    else:
+        all_pvs, all_ratios = uncurl_poisson_test_1_vs_rest(m, w, mode=mode, clusters=clusters)
+        return all_pvs, all_ratios, clusters_to_groups
+
 
 def c_scores_from_pv_ratios(all_pvs, all_ratios):
     """
@@ -53,6 +89,11 @@ def c_scores_from_pv_ratios(all_pvs, all_ratios):
     cluster_ratios = np.zeros((clusters, genes)) - 1
     cluster_pvals = np.zeros((clusters, genes)) - 1
     for k in range(clusters):
-        scores = c_scores[k]
-        scores.sort()
-    return c_clusters, c_scores, c_pvals
+        # sort by ratio
+        c_scores[best_cluster].sort(key=lambda x: x[1], reverse=True)
+        for i, sc in enumerate(c_scores[best_cluster]):
+            g, lowest_ratio, best_pval = sc
+            cluster_genes[k, i] = g
+            cluster_ratios[k, i] = lowest_ratio
+            cluster_pvals[k, i] = best_pval
+    return c_scores

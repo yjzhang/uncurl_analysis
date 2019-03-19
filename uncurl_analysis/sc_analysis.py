@@ -118,10 +118,17 @@ class SCAnalysis(object):
         self.has_cluster_names = os.path.exists(self.cluster_names_f)
         self._cluster_names = None
 
+        # m from running uncurl
         self.m_f = os.path.join(data_dir, 'm.txt')
         self.has_m = os.path.exists(self.m_f)
         self._m = None
 
+        # m with all genes
+        self.m_full_f = os.path.join(data_dir, 'm_full.txt')
+        self.has_m_full = os.path.exists(self.m_full_f)
+        self._m_full = None
+
+        # m from sampled genes
         self.m_sampled_f = os.path.join(data_dir, 'm_sampled.txt')
         self.has_m_sampled = os.path.exists(self.m_sampled_f)
         self._m_sampled = None
@@ -380,6 +387,24 @@ class SCAnalysis(object):
             if self._m_sampled is None:
                 self._m_sampled = np.loadtxt(self.m_sampled_f)
             return self._m_sampled
+
+    @property
+    def m_full(self):
+        if self._m_full is None:
+            if self.has_m_full:
+                m_full = np.loadtxt(self.m_full_f)
+                self._m_full = m_full
+            else:
+                m = self.m
+                w = self.w
+                data = self.data_subset
+                selected_genes = self.selected_genes
+                self._m_full = uncurl.update_m(data, m, w, selected_genes,
+                        **self.uncurl_kwargs)
+                self._m_full = self._m_full
+                self.has_m_full = True
+                np.savetxt(self.m_full_f, self._m_full)
+        return self._m_full
 
     @property
     def labels(self):

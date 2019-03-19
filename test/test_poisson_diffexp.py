@@ -16,7 +16,7 @@ class DiffexpTest(unittest.TestCase):
         data2 = np.array([1,1.2,3,1.1])
         pv, ratio = poisson_diffexp.log_wald_poisson_test(data2, data1)
         print('pv: ', pv, ' ratio: ', ratio)
-        self.assertTrue(pv < 0.1)
+        self.assertTrue(pv < 0.05)
 
     def test_real_data_1_vs_rest(self):
         mat = scipy.io.loadmat('data/10x_pooled_400.mat')
@@ -55,6 +55,23 @@ class DiffexpTest(unittest.TestCase):
         self.assertEqual(all_ratios.shape, (data.shape[0], 8, 8))
         self.assertTrue((all_pvs < 0.001).sum() < data.shape[0])
         self.assertTrue((all_pvs < 0.01).sum() > 100)
+
+    def test_simulated_data(self):
+        from uncurl import simulation
+        data, clusters = simulation.generate_poisson_data(np.array([[1.0, 100], [100, 1.0]]), 100)
+        pvs, ratios, _ = poisson_diffexp.poisson_test_known_groups(data, clusters, test_mode='1_vs_rest')
+        self.assertTrue(pvs[0, 1] < 0.001)
+        self.assertFalse(pvs[0, 0] < 0.05)
+        self.assertTrue(pvs[1, 0] < 0.001)
+        self.assertFalse(pvs[1, 1] < 0.05)
+        data, clusters = simulation.generate_poisson_data(np.array([[1.0, 5], [5, 1.0], [5, 5]]), 100)
+        pvs, ratios, _ = poisson_diffexp.poisson_test_known_groups(data, clusters, test_mode='1_vs_rest')
+        print(pvs)
+        print(ratios)
+        self.assertTrue(pvs[0, 1] < 0.05)
+        self.assertTrue(pvs[1, 0] < 0.05)
+        self.assertFalse(pvs[2, 1] < 0.05)
+        self.assertFalse(pvs[2, 0] < 0.05)
 
 
 if __name__ == '__main__':

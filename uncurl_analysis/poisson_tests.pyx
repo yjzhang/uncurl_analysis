@@ -6,7 +6,6 @@ cimport numpy as np
 from libc.math cimport sqrt, log, log2, log10, exp2
 
 from scipy.special import ndtr
-from scipy import stats
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -16,7 +15,9 @@ def log_wald_poisson_test(np.ndarray[double, ndim=1] data1,
         double counts1=0,
         double counts2=0):
     """
-    Source: [source here]
+    Source: this is the W3 statistic from https://onlinelibrary.wiley.com/doi/abs/10.1002/sim.1949
+
+    See also: https://bmcsystbiol.biomedcentral.com/articles/10.1186/1752-0509-5-S3-S1
     """
     if counts1 == 0:
         counts1 = len(data1)
@@ -32,7 +33,7 @@ def log_wald_poisson_test(np.ndarray[double, ndim=1] data1,
     counts1 += 0.5
     counts2 += 0.5
     cdef double d = counts1/counts2
-    cdef double W3 = (log(X1/X0) - log(d))*sqrt(1.0/X0 + 1.0/X1)
+    cdef double W3 = (log(X1/X0) - log(d))/sqrt(1.0/X0 + 1.0/X1)
     if np.isnan(W3):
         return 0.5, 1.0
     # normal CDF
@@ -40,7 +41,6 @@ def log_wald_poisson_test(np.ndarray[double, ndim=1] data1,
     # on one test case, using norm.cdf took ~13 seconds
     # while using ndtr took ~4 seconds
     cdef double pv = 1 - ndtr(W3)
-    #pv = 1 - scipy.stats.norm.cdf(W3)
     cdef double ratio = X1/(X0*d)
     return pv, ratio
 
@@ -49,11 +49,11 @@ def log_wald_poisson_test(np.ndarray[double, ndim=1] data1,
 @cython.nonecheck(False)
 def log_wald_poisson_test_counts(double X1,
         double X0,
-        double counts1=0,
-        double counts2=0):
+        double counts1,
+        double counts2):
     """
-    Same as log-wald poisson test, but takes in counts
-    rather than matrices of data.
+    Same as log_wald_poisson_test, but takes in counts
+    rather than arrays of data.
     """
     if X1 == 0 and X0 == 0:
         return 0.5, 1.0
@@ -63,15 +63,14 @@ def log_wald_poisson_test_counts(double X1,
     counts1 += 0.5
     counts2 += 0.5
     cdef double d = counts1/counts2
-    cdef double W3 = (log(X1/X0) - log(d))*sqrt(1.0/X0 + 1.0/X1)
+    cdef double W3 = (log(X1/X0) - log(d))/sqrt(1.0/X0 + 1.0/X1)
     if np.isnan(W3):
         return 0.5, 1.0
     # normal CDF
-    # ndtr is much more computationally efficient than norm.cdf
-    # on one test case, using norm.cdf took ~13 seconds
+    # ndtr is much more computationally efficient than scipy.stats.norm.cdf
+    # on one test case, using scipy.stats.norm.cdf took ~13 seconds
     # while using ndtr took ~4 seconds
     cdef double pv = 1 - ndtr(W3)
-    #pv = 1 - scipy.stats.norm.cdf(W3)
     cdef double ratio = X1/(X0*d)
     return pv, ratio
 
@@ -79,7 +78,8 @@ def log_wald_poisson_test_counts(double X1,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-def uncurl_poisson_test_1_vs_rest(np.ndarray[double, ndim=2] m, np.ndarray[double, ndim=2] w, str mode='counts'):
+def uncurl_poisson_test_1_vs_rest(np.ndarray[double, ndim=2] m, np.ndarray[double, ndim=2] w, str mode='counts',
+        np.ndarray[Py_ssize_t, ndim=1] clusters=None):
     """
     Calculates 1-vs-rest ratios and p-values for all genes.
 
@@ -89,9 +89,9 @@ def uncurl_poisson_test_1_vs_rest(np.ndarray[double, ndim=2] m, np.ndarray[doubl
 
     Returns two arrays: all_pvs and all_ratios, of shape (genes, clusters).
     """
-    # TODO: make this more efficient...
-    cdef np.ndarray[Py_ssize_t, ndim=1] clusters = w.argmax(0)
-    cdef Py_ssize_t n_clusters = w.shape[0]
+    if clusters is None:
+        clusters = w.argmax(0)
+    cdef Py_ssize_t n_clusters = len(set(clusters))
     cdef Py_ssize_t genes = m.shape[0]
     cdef Py_ssize_t cells = w.shape[1]
     cdef Py_ssize_t g, i, j, k
@@ -131,7 +131,8 @@ def uncurl_poisson_test_1_vs_rest(np.ndarray[double, ndim=2] m, np.ndarray[doubl
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-def uncurl_poisson_test_pairwise(np.ndarray[double, ndim=2] m, np.ndarray[double, ndim=2] w, str mode='counts'):
+def uncurl_poisson_test_pairwise(np.ndarray[double, ndim=2] m, np.ndarray[double, ndim=2] w, str mode='counts',
+        np.ndarray[Py_ssize_t, ndim=1] clusters=None):
     """
     Pairwise Poisson tests between all clusters.
 
@@ -140,8 +141,9 @@ def uncurl_poisson_test_pairwise(np.ndarray[double, ndim=2] m, np.ndarray[double
         p-values between two clusters.
 
     """
-    cdef np.ndarray[Py_ssize_t, ndim=1] clusters = w.argmax(0)
-    cdef Py_ssize_t n_clusters = w.shape[0]
+    if clusters is None:
+        clusters = w.argmax(0)
+    cdef Py_ssize_t n_clusters = len(set(clusters))
     cdef Py_ssize_t genes = m.shape[0]
     cdef Py_ssize_t cells = w.shape[1]
     cdef Py_ssize_t g, i, j, k, k1, k2

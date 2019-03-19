@@ -6,8 +6,7 @@ cimport numpy as np
 from libc.math cimport sqrt, log2, log10, exp2
 
 from scipy import sparse
-from scipy.special import xlogy
-from scipy import stats
+from scipy.special import xlogy, stdtr
 
 ctypedef fused int2:
     short
@@ -26,7 +25,7 @@ ctypedef fused numeric:
     float
     double
 
-cdf = stats.t.cdf
+cdf = stdtr
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -226,7 +225,7 @@ cdef inline double t_test(double m1, double m2, double v1, double v2,
     cdef double t_test_statistic = (m1 - m2)/sqrt(v1/n1 + v2/n2)
     # TODO: we really should try Welch's dof procedure
     cdef double dof = max(n1 + n2 - 2, 1)
-    cdef double pval = 1 - cdf(t_test_statistic, dof)
+    cdef double pval = 1 - cdf(dof, t_test_statistic)
     return pval
 
 
