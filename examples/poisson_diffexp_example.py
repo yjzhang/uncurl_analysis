@@ -21,3 +21,12 @@ print('diffexp time: ', time.time() - t0)
 t0 = time.time()
 all_pvs_2, all_ratios_2 = poisson_diffexp.uncurl_poisson_test_pairwise(m, w, mode='counts')
 print('pairwise diffexp time: ', time.time() - t0)
+
+# test on simulated data
+from uncurl import simulation
+
+# we have two clusters and two genes. Gene 0 is upregulated in cluster 1, gene 1 is upregulated in cluster 0.
+data, clusters = simulation.generate_poisson_data(np.array([[1.0, 100], [100, 1.0]]), 100)
+
+# the correct response: pvs[0,1,0] is significant and pvs[1,0,1] is significant
+pvs, ratios, _ = poisson_diffexp.poisson_test_known_groups(data, clusters, test_mode='1_vs_rest')
