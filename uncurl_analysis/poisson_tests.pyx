@@ -5,7 +5,30 @@ cimport numpy as np
 
 from libc.math cimport sqrt, log, log2, log10, exp2
 
-from scipy.special import ndtr
+from scipy.special import ndtr, stdtr
+
+
+cdef inline double t_test(double s1, double s2, double v1, double v2,
+        double n1, double n2):
+    """
+    Computes a two-sample one-sided t-test, returning the p-value.
+
+    Args:
+        s1 - sum of sample 1
+        s2 - sum of sample 2
+        v1 - variance of sample 1
+        v2 - variance of sample 2
+        n1 - cell counts of sample 1
+        n2 - cell counts of sample 2
+    """
+    cdef double m1 = s1/n1
+    cdef double m2 = s2/n2
+    cdef double t_test_statistic = (m1 - m2)/sqrt(v1/n1 + v2/n2)
+    # TODO: we really should try Welch's dof procedure
+    cdef double dof = max(n1 + n2 - 2, 1)
+    cdef double pval = 1 - stdtr(dof, t_test_statistic)
+    cdef double ratio = m1/m2
+    return pval, ratio
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -78,7 +101,8 @@ def log_wald_poisson_test_counts(double X1,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-def uncurl_poisson_test_1_vs_rest(np.ndarray[double, ndim=2] m, np.ndarray[double, ndim=2] w, str mode='counts',
+def uncurl_test_1_vs_rest(np.ndarray[double, ndim=2] m, np.ndarray[double, ndim=2] w, str mode='counts',
+        str test='poisson',
         np.ndarray[Py_ssize_t, ndim=1] clusters=None):
     """
     Calculates 1-vs-rest ratios and p-values for all genes.
@@ -91,6 +115,9 @@ def uncurl_poisson_test_1_vs_rest(np.ndarray[double, ndim=2] m, np.ndarray[doubl
     """
     if clusters is None:
         clusters = w.argmax(0)
+    cdef int use_t_test = 0
+    if test == 't':
+        use_t_test = 1
     cdef Py_ssize_t n_clusters = len(set(clusters))
     cdef Py_ssize_t genes = m.shape[0]
     cdef Py_ssize_t cells = w.shape[1]
@@ -102,6 +129,10 @@ def uncurl_poisson_test_1_vs_rest(np.ndarray[double, ndim=2] m, np.ndarray[doubl
     cdef np.ndarray[double, ndim=1] gene_matrix
     # cluster_gene_counts is the counts of each cluster for one gene
     cdef np.ndarray[double, ndim=1] cluster_gene_counts = np.zeros(n_clusters)
+    # these are only necessary for t-tests
+    cdef np.ndarray[double, ndim=1] cluster_means
+    cdef np.ndarray[double, ndim=1] cluster_variances
+    # outputs
     cdef np.ndarray[double, ndim=2] all_pvs = np.zeros((genes, n_clusters))
     cdef np.ndarray[double, ndim=2] all_ratios = np.zeros((genes, n_clusters))
     if mode == 'counts':
@@ -115,15 +146,23 @@ def uncurl_poisson_test_1_vs_rest(np.ndarray[double, ndim=2] m, np.ndarray[doubl
     for g in range(genes):
         cluster_gene_counts = np.zeros(n_clusters)
         gene_matrix = np.dot(m[g, :], w)
+        if use_t_test:
+            cluster_means = np.zeros(n_clusters)
+            cluster_variances = np.zeros(n_clusters)
         for i in range(cells):
             j = clusters[i]
             cluster_gene_counts[j] += gene_matrix[i]
+            if use_t_test:
+                pass
         for k in range(n_clusters):
             in_cluster_counts = cluster_gene_counts[k]
             not_in_cluster_counts = cluster_gene_counts[:k].sum() + cluster_gene_counts[k+1:].sum()
             counts1 = cluster_cell_counts[k]
             counts2 = cluster_cell_counts[:k].sum() + cluster_cell_counts[k+1:].sum()
-            pv, ratio = log_wald_poisson_test_counts(in_cluster_counts, not_in_cluster_counts, counts1, counts2)
+            if use_t_test:
+                pass
+            else:
+                pv, ratio = log_wald_poisson_test_counts(in_cluster_counts, not_in_cluster_counts, counts1, counts2)
             all_pvs[g, k] = pv
             all_ratios[g, k] = ratio
     return all_pvs, all_ratios
@@ -131,7 +170,8 @@ def uncurl_poisson_test_1_vs_rest(np.ndarray[double, ndim=2] m, np.ndarray[doubl
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
-def uncurl_poisson_test_pairwise(np.ndarray[double, ndim=2] m, np.ndarray[double, ndim=2] w, str mode='counts',
+def uncurl_test_pairwise(np.ndarray[double, ndim=2] m, np.ndarray[double, ndim=2] w, str mode='counts',
+        str test='poisson',
         np.ndarray[Py_ssize_t, ndim=1] clusters=None):
     """
     Pairwise Poisson tests between all clusters.
@@ -143,6 +183,9 @@ def uncurl_poisson_test_pairwise(np.ndarray[double, ndim=2] m, np.ndarray[double
     """
     if clusters is None:
         clusters = w.argmax(0)
+    cdef int use_t_test = 0
+    if test == 't':
+        use_t_test = 1
     cdef Py_ssize_t n_clusters = len(set(clusters))
     cdef Py_ssize_t genes = m.shape[0]
     cdef Py_ssize_t cells = w.shape[1]
@@ -154,8 +197,14 @@ def uncurl_poisson_test_pairwise(np.ndarray[double, ndim=2] m, np.ndarray[double
     cdef np.ndarray[double, ndim=1] gene_matrix
     # cluster_gene_counts is the counts of each cluster for one gene
     cdef np.ndarray[double, ndim=1] cluster_gene_counts = np.zeros(n_clusters)
+    # these are only necessary for t-tests
+    cdef np.ndarray[double, ndim=1] cluster_means
+    cdef np.ndarray[double, ndim=1] cluster_variances
+    # outputs
     cdef np.ndarray[double, ndim=3] all_pvs = np.zeros((genes, n_clusters, n_clusters))
     cdef np.ndarray[double, ndim=3] all_ratios = np.zeros((genes, n_clusters, n_clusters))
+    # TODO: if test is 't', calculate mean and variance across cells
+    # use an online mean/variance algorithm, just for computational efficiency?
     if mode == 'counts':
         for i in range(cells):
             cell_counts[i] += m.dot(w[:,i]).sum()
@@ -167,16 +216,24 @@ def uncurl_poisson_test_pairwise(np.ndarray[double, ndim=2] m, np.ndarray[double
     for g in range(genes):
         cluster_gene_counts = np.zeros(n_clusters)
         gene_matrix = np.dot(m[g, :], w)
+        if use_t_test:
+            cluster_means = np.zeros(n_clusters)
+            cluster_variances = np.zeros(n_clusters)
         for i in range(cells):
             j = clusters[i]
             cluster_gene_counts[j] += gene_matrix[i]
+            if use_t_test:
+                pass
         for k1 in range(n_clusters):
             in_cluster_counts = cluster_gene_counts[k1]
             counts1 = cluster_cell_counts[k1]
             for k2 in range(n_clusters):
                 not_in_cluster_counts = cluster_gene_counts[k2]
                 counts2 = cluster_cell_counts[k2]
-                pv, ratio = log_wald_poisson_test_counts(in_cluster_counts, not_in_cluster_counts, counts1, counts2)
+                if use_t_test:
+                    pass
+                else:
+                    pv, ratio = log_wald_poisson_test_counts(in_cluster_counts, not_in_cluster_counts, counts1, counts2)
                 all_pvs[g, k1, k2] = pv
                 all_ratios[g, k1, k2] = ratio
     return all_pvs, all_ratios

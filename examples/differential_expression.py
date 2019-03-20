@@ -5,7 +5,7 @@ import pandas as pd
 
 import scipy.io
 
-from uncurl_analysis.gene_extraction import find_overexpressed_genes, generate_permutations, c_scores_to_pvals
+from uncurl_analysis.gene_extraction import find_overexpressed_genes, pairwise_t, c_scores_from_t
 
 # step 1: load data
 data = scipy.io.loadmat('data/SCDE_k2_sup.mat')
@@ -25,14 +25,18 @@ assert(len(table_gene_names)==data_csc.shape[0])
 c_scores = find_overexpressed_genes(data_csc, labels)
 
 # generate permutations
-permutations = generate_permutations(data_csc, 2, labels, n_perms=500)
+#permutations = generate_permutations(data_csc, 2, labels, n_perms=500)
+import time
+t0 = time.time()
+scores, pvals = pairwise_t(data_csc, labels)
 
 # calculate p-values
-pvals = c_scores_to_pvals(c_scores, permutations)
+c_scores, c_pvals = c_scores_from_t(scores, pvals)
+print('c score time: ', time.time() - t0)
 
 # step 3: map gene ids to gene names
-new_pvals = {k:[] for k in pvals.keys()}
-for k, p in pvals.items():
+new_pvals = {k:[] for k in c_pvals.keys()}
+for k, p in c_pvals.items():
     for gene_id, pv in p:
         new_pvals[k].append((table_gene_names.iloc[gene_id], pv))
 
@@ -54,7 +58,7 @@ scde_genes = list(plist[0][1])
 deseq_genes = list(plist[1][8])
 cuffdiff2_genes = list(plist[2][0])
 
-top_cs_genes = [x[0] for x in new_pvals[2] if x[1]<=0.05]
+top_cs_genes = [x[0] for x in new_pvals[1] if x[1]<=0.05]
 
 
 cs_genes_intersection = len(set(top_cs_genes).intersection(top_1000_genes))

@@ -5,10 +5,11 @@
 # https://bmcsystbiol.biomedcentral.com/articles/10.1186/1752-0509-5-S3-S1
 
 import numpy as np
-from uncurl_analysis.poisson_tests import log_wald_poisson_test, uncurl_poisson_test_1_vs_rest, uncurl_poisson_test_pairwise
+from uncurl_analysis.poisson_tests import log_wald_poisson_test, uncurl_test_1_vs_rest, uncurl_test_pairwise
 
 # TODO: poisson test with pre-defined group?
 def poisson_test_known_groups(data, groups, test_mode='pairwise',
+        test='poisson',
         mode='counts', m=None, w=None):
     """
     Given a list of known groups, one for each cell: this runs uncurl-based Poisson diffexp
@@ -18,6 +19,7 @@ def poisson_test_known_groups(data, groups, test_mode='pairwise',
         data (dense or sparse array): shape is (genes, cells)
         groups (1d array or list): int or string for each cell, indicating groups
         test_mode (str): 'pairwise' or '1_vs_rest'. Default: 'pairwise'
+        test (str): 'poisson' or 't' (TODO)
         mode (str): 'counts' or 'cells'
 
     Returns:
@@ -38,10 +40,10 @@ def poisson_test_known_groups(data, groups, test_mode='pairwise',
                 max_assign_weight=1.0, run_w_first=False, max_iters=10, inner_max_iters=100)
     # now we can use poisson test
     if test_mode == 'pairwise':
-        all_pvs, all_ratios = uncurl_poisson_test_pairwise(m, w, mode=mode, clusters=clusters)
+        all_pvs, all_ratios = uncurl_test_pairwise(m, w, mode=mode, test=test, clusters=clusters)
         return all_pvs, all_ratios, clusters_to_groups
     else:
-        all_pvs, all_ratios = uncurl_poisson_test_1_vs_rest(m, w, mode=mode, clusters=clusters)
+        all_pvs, all_ratios = uncurl_test_1_vs_rest(m, w, mode=mode, test=test, clusters=clusters)
         return all_pvs, all_ratios, clusters_to_groups
 
 
