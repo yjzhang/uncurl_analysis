@@ -7,6 +7,8 @@ import scipy.io
 
 from uncurl_analysis.gene_extraction import find_overexpressed_genes, pairwise_t, c_scores_from_t
 
+from uncurl.preprocessing import log1p
+
 # step 1: load data
 data = scipy.io.loadmat('data/SCDE_k2_sup.mat')
 data_csc = data['dat']
@@ -21,14 +23,17 @@ table_gene_names = table.iloc[7:,0]
 
 assert(len(table_gene_names)==data_csc.shape[0])
 
-# step 2: get c-scores & convert to p-values
-c_scores = find_overexpressed_genes(data_csc, labels)
-
-# generate permutations
-#permutations = generate_permutations(data_csc, 2, labels, n_perms=500)
+# do a t-test
 import time
 t0 = time.time()
-scores, pvals = pairwise_t(data_csc, labels)
+#data_csc.data = data_csc.data**2
+scores, pvals = pairwise_t(data_csc, labels, eps=0.1)
+
+# TODO: calculate implied ratios from scores vs actual ratios
+implied_ratios = 2**scores[1,0,:]
+actual_ratios = (data_csc[:,labels==2].mean(1) + 0.1)/(data_csc[:,labels==1].mean(1) + 0.1)
+import numpy as np
+actual_ratios = np.array(actual_ratios).flatten()
 
 # calculate p-values
 c_scores, c_pvals = c_scores_from_t(scores, pvals)

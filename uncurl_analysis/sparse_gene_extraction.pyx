@@ -79,7 +79,8 @@ def csc_unweighted_cluster_means(np.ndarray[numeric, ndim=1] data,
         np.ndarray[int2, ndim=1] indptr,
         np.ndarray[long, ndim=1] labels,
         Py_ssize_t cells,
-        Py_ssize_t genes):
+        Py_ssize_t genes,
+        double eps=0.0):
     """
     returns a cluster-specific means matrix, given labels.
     """
@@ -298,11 +299,19 @@ def csc_unweighted_t_test(np.ndarray[numeric, ndim=1] data,
     all genes.
     """
     cdef double[:,:] cluster_means
+    #base_means is non-log
+    cdef double[:,:] base_means
     cdef double[:,:] cluster_variances
     cdef double[:] cluster_cell_counts
-    cdef np.ndarray[double, ndim=1] log_data = np.log2(data + eps)
+    # TODO: eps is being applied incorrectly - it should apply to the 0 values as well.
+    # also this whole thing is wrong... log isn't applied to the zero values
+    # when it really should be... it should be log1p...
+    cdef np.ndarray[double, ndim=1] log_data = np.log2(data + 1.0)
     cluster_means, cluster_cell_counts = csc_unweighted_cluster_means(
             log_data, indices, indptr, labels, cells, genes)
+    # TODO: calculate ratios using base_means
+    base_means, cluster_cell_counts = csc_unweighted_cluster_means(
+            data, indices, indptr, labels, cells, genes)
     # calculate variance... var = E[X]^2 - E[X^2]
     cdef int2 g, k
     cdef np.ndarray[double, ndim=1] log_data_sq = np.power(log_data, 2)
@@ -313,7 +322,7 @@ def csc_unweighted_t_test(np.ndarray[numeric, ndim=1] data,
     cdef int2 K = len(labels_set)
     cdef double[:,:,:] scores = np.zeros((K, K, genes))
     cdef double[:,:,:] pvals = np.zeros((K, K, genes))
-    cdef double mean_k, mean_k2, var_k, var_k2
+    cdef double mean_k, mean_k2, var_k, var_k2, score, base_mean_k
     cdef double[:,:] cluster_vars = np.zeros((genes, K))
     for g in range(genes):
         for k in range(K):
@@ -321,15 +330,17 @@ def csc_unweighted_t_test(np.ndarray[numeric, ndim=1] data,
     for g in range(genes):
         for k in range(K):
             mean_k = cluster_means[g, k]
+            base_mean_k = base_means[g, k]
             var_k = cluster_vars[g, k]
             for k2 in range(K):
                 mean_k2 = cluster_means[g, k2]
                 var_k2 = cluster_vars[g, k2]
-                scores[k, k2, g] = mean_k - cluster_means[g, k2]
+                score = mean_k - cluster_means[g, k2]
+                scores[k, k2, g] = (base_mean_k + eps)/(base_means[g, k2] + eps)
                 # truncate this so that we don't have to perform so many
                 # t-test calculations - this is solely for efficiency :(
                 if calc_pvals:
-                    if scores[k, k2, g] <= 0 or (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k2] == 0 or cluster_cell_counts[k] == 0:
+                    if score <= 0 or (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k2] == 0 or cluster_cell_counts[k] == 0:
                         pvals[k, k2, g] = 1
                     else:
                         pvals[k, k2, g] = t_test(mean_k, mean_k2, var_k,
@@ -355,11 +366,16 @@ def csc_unweighted_1_vs_rest_t_test(np.ndarray[numeric, ndim=1] data,
     Output is a matrix of shape (clusters, genes).
     """
     cdef double[:,:] cluster_means
+    cdef double[:,:] rest_cluster_means
+    cdef double[:,:] base_means
+    cdef double[:,:] rest_base_means
     cdef double[:,:] cluster_variances
     cdef double[:] cluster_cell_counts
-    cdef np.ndarray[double, ndim=1] log_data = np.log2(data + eps)
+    cdef np.ndarray[double, ndim=1] log_data = np.log2(data + 1.0)
     cluster_means, rest_cluster_means, cluster_cell_counts = csc_1_vs_rest_cluster_means(
             log_data, indices, indptr, labels, cells, genes)
+    base_means, rest_base_means, cluster_cell_counts = csc_1_vs_rest_cluster_means(
+            data, indices, indptr, labels, cells, genes)
     # calculate variance... var = E[X]^2 - E[X^2]
     cdef int2 g, k
     cdef np.ndarray[double, ndim=1] log_data_sq = np.power(log_data, 2)
@@ -370,7 +386,7 @@ def csc_unweighted_1_vs_rest_t_test(np.ndarray[numeric, ndim=1] data,
     cdef int2 K = len(labels_set)
     cdef double[:,:] scores = np.zeros((K, genes))
     cdef double[:,:] pvals = np.zeros((K, genes))
-    cdef double mean_k, mean_k2, var_k, var_k2
+    cdef double mean_k, mean_k2, var_k, var_k2, score
     cdef double[:,:] cluster_vars = np.zeros((genes, K))
     cdef double[:,:] rest_cluster_vars = np.zeros((genes, K))
     for g in range(genes):
@@ -384,9 +400,10 @@ def csc_unweighted_1_vs_rest_t_test(np.ndarray[numeric, ndim=1] data,
             # sum up all the "rest" clusters
             mean_k2 = rest_cluster_means[g, k]
             var_k2 = rest_cluster_vars[g, k]
-            scores[k, g] = mean_k - mean_k2
+            score = mean_k - mean_k2
+            scores[k, g] = (base_means[g, k] + eps)/(rest_base_means[g, k] + eps)
             if calc_pvals:
-                if scores[k, g] <= 0 or (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k] == 0:
+                if score <= 0 or (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k] == 0:
                     pvals[k, g] = 1
                 else:
                     pvals[k, g] = t_test(mean_k, mean_k2, var_k,
@@ -400,7 +417,7 @@ def csc_unweighted_1_vs_rest_t_test(np.ndarray[numeric, ndim=1] data,
         pvals_output[k] = []
     for g in range(genes):
         for k in range(K):
-            scores_output[k].append((g, exp2(scores[k, g])))
+            scores_output[k].append((g, scores[k, g]))
             pvals_output[k].append((g, pvals[k, g]))
     # this section sorts all the c-scores and pvals.
     for k in range(K):
@@ -441,7 +458,7 @@ def t_test_c_scores(np.ndarray[double, ndim=3] scores,
                 if k2 != k and cs <= min_cs:
                     min_cs = cs
                     best_pval = pvals_[k, k2, g]
-            c_scores[k].append((g, exp2(min_cs)))
+            c_scores[k].append((g, min_cs))
             c_pvals[k].append((g, best_pval))
     for k in range(K):
         k_c_scores = np.array([x[1] for x in c_scores[k]])
