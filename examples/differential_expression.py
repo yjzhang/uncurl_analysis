@@ -5,9 +5,8 @@ import pandas as pd
 
 import scipy.io
 
-from uncurl_analysis.gene_extraction import find_overexpressed_genes, pairwise_t, c_scores_from_t
+from uncurl_analysis.gene_extraction import pairwise_t, c_scores_from_t
 
-from uncurl.preprocessing import log1p
 
 # step 1: load data
 data = scipy.io.loadmat('data/SCDE_k2_sup.mat')
@@ -29,10 +28,20 @@ t0 = time.time()
 #data_csc.data = data_csc.data**2
 scores, pvals = pairwise_t(data_csc, labels, eps=0.1)
 
-# TODO: calculate implied ratios from scores vs actual ratios
-implied_ratios = 2**scores[1,0,:]
-actual_ratios = (data_csc[:,labels==2].mean(1) + 0.1)/(data_csc[:,labels==1].mean(1) + 0.1)
+# TODO: calculate FDR
+from statsmodels.stats import multitest
+reject, pvals_corrected, a, b = multitest.multipletests(pvals[1,0,:])
+pvals[1,0,:] = pvals_corrected
+reject, pvals_corrected, a, b = multitest.multipletests(pvals[0,1,:])
+pvals[0,1,:] = pvals_corrected
+#reject, pvals_corrected, a, b = multitest.multipletests(pvals[1,0,:])
+#pvals[1,1,:] = pvals_corrected
+#reject, pvals_corrected, a, b = multitest.multipletests(pvals[1,0,:])
+#pvals[0,0,:] = pvals_corrected
+
+# calculate actual ratios between means of the two clusters
 import numpy as np
+actual_ratios = (data_csc[:,labels==2].mean(1) + 0.1)/(data_csc[:,labels==1].mean(1) + 0.1)
 actual_ratios = np.array(actual_ratios).flatten()
 
 # calculate p-values

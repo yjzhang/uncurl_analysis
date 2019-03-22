@@ -273,7 +273,7 @@ def csc_weighted_t_test(np.ndarray[numeric, ndim=1] data,
                 # t-test calculations - this is solely for efficiency :(
                 # print(g, k, k2, var_k, var_k2, cluster_cell_counts[k])
                 if calc_pvals:
-                    if scores[k, k2, g] <= 0 or (var_k == 0 and var_k2 == 0) or (cluster_cell_counts[k2] == 0 and cluster_cell_counts[k] == 0):
+                    if (var_k == 0 and var_k2 == 0) or (cluster_cell_counts[k2] == 0 and cluster_cell_counts[k] == 0):
                         pvals[k, k2, g] = 1
                     else:
                         pvals[k, k2, g] = t_test(mean_k, mean_k2, var_k,
@@ -303,13 +303,11 @@ def csc_unweighted_t_test(np.ndarray[numeric, ndim=1] data,
     cdef double[:,:] base_means
     cdef double[:,:] cluster_variances
     cdef double[:] cluster_cell_counts
-    # TODO: eps is being applied incorrectly - it should apply to the 0 values as well.
-    # also this whole thing is wrong... log isn't applied to the zero values
-    # when it really should be... it should be log1p...
+    # log_data is log1p(data)
     cdef np.ndarray[double, ndim=1] log_data = np.log2(data + 1.0)
     cluster_means, cluster_cell_counts = csc_unweighted_cluster_means(
             log_data, indices, indptr, labels, cells, genes)
-    # TODO: calculate ratios using base_means
+    # calculate ratios using base_means
     base_means, cluster_cell_counts = csc_unweighted_cluster_means(
             data, indices, indptr, labels, cells, genes)
     # calculate variance... var = E[X]^2 - E[X^2]
@@ -340,7 +338,7 @@ def csc_unweighted_t_test(np.ndarray[numeric, ndim=1] data,
                 # truncate this so that we don't have to perform so many
                 # t-test calculations - this is solely for efficiency :(
                 if calc_pvals:
-                    if score <= 0 or (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k2] == 0 or cluster_cell_counts[k] == 0:
+                    if (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k2] == 0 or cluster_cell_counts[k] == 0:
                         pvals[k, k2, g] = 1
                     else:
                         pvals[k, k2, g] = t_test(mean_k, mean_k2, var_k,
@@ -403,7 +401,7 @@ def csc_unweighted_1_vs_rest_t_test(np.ndarray[numeric, ndim=1] data,
             score = mean_k - mean_k2
             scores[k, g] = (base_means[g, k] + eps)/(rest_base_means[g, k] + eps)
             if calc_pvals:
-                if score <= 0 or (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k] == 0:
+                if (var_k == 0 and var_k2 == 0) or cluster_cell_counts[k] == 0:
                     pvals[k, g] = 1
                 else:
                     pvals[k, g] = t_test(mean_k, mean_k2, var_k,

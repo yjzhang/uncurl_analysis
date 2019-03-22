@@ -69,7 +69,7 @@ class DiffexpTest(unittest.TestCase):
         self.assertFalse(pvs[0, 0, 0] < 0.05)
         self.assertTrue(pvs[1, 0, 1] < 0.001)
         self.assertFalse(pvs[1, 1, 1] < 0.05)
-        data, clusters = simulation.generate_poisson_data(np.array([[1.0, 5], [5, 1.0], [0.1, 0.1], [0.4, 0.1]]), 100)
+        data, clusters = simulation.generate_poisson_data(np.array([[1.0, 5], [5, 1.0], [0.1, 0.1], [0.4, 0.1]]), 500)
         pvs, ratios, _ = poisson_diffexp.poisson_test_known_groups(data, clusters, test_mode='1_vs_rest')
         print(pvs)
         print(ratios)

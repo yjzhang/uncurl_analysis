@@ -82,6 +82,9 @@ def pairwise_t(data, w_or_labels, eps=1.0, calc_pvals=True):
     Computes pairwise t-test between all pairs of clusters and all genes.
 
     If calc_pvals is False, the pvals will be all 0.
+
+    Returns:
+        ratios, pvals - two arrays of shape (k, k, genes), where k is the number of clusters.
     """
     data_csc = sparse.csc_matrix(data)
     genes, cells = data.shape
