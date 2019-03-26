@@ -905,7 +905,7 @@ class SCAnalysis(object):
     def recluster(self, split_or_merge='split',
             clusters_to_change=[]):
         """
-        Runs split or merge
+        Runs split, merge, or new cluster. Updates m and w.
         """
         data_sampled = self.data_sampled
         if 'init_means' in self.uncurl_kwargs:
@@ -922,6 +922,10 @@ class SCAnalysis(object):
         elif split_or_merge == 'merge':
             self.clusters = w_new.shape[0] - len(clusters_to_change) + 1
             m_new, w_new = relabeling.merge_clusters(data_sampled, m_new, w_new,
+                    clusters_to_change, **self.uncurl_kwargs)
+        elif split_or_merge == 'new':
+            self.clusters = w_new.shape[0] + 1
+            m_new, w_new = relabeling.new_cluster(data_sampled, m_new, w_new,
                     clusters_to_change, **self.uncurl_kwargs)
         # set w_sampled
         self._w_sampled = w_new

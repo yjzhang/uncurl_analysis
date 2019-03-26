@@ -357,11 +357,13 @@ def csc_unweighted_1_vs_rest_t_test(np.ndarray[numeric, ndim=1] data,
         Py_ssize_t cells,
         Py_ssize_t genes,
         double eps=1.0,
-        int calc_pvals=True):
+        int calc_pvals=True,
+        str mode='t'):
     """
     Returns a 1 vs rest t-test for every gene and cluster.
 
-    Output is a matrix of shape (clusters, genes).
+    Output is two dicts of {cluster : [list of (gene, ratio)]}, {cluster : [list of (gene, p-val)]}, where
+    the lists are sorted by descending ratio/ascending p-val.
     """
     cdef double[:,:] cluster_means
     cdef double[:,:] rest_cluster_means
@@ -387,6 +389,7 @@ def csc_unweighted_1_vs_rest_t_test(np.ndarray[numeric, ndim=1] data,
     cdef double mean_k, mean_k2, var_k, var_k2, score
     cdef double[:,:] cluster_vars = np.zeros((genes, K))
     cdef double[:,:] rest_cluster_vars = np.zeros((genes, K))
+    # TODO: if mode is not 't': do something different
     for g in range(genes):
         for k in range(K):
             cluster_vars[g, k] = cluster_sq_means[g, k] - cluster_means[g, k]**2

@@ -76,3 +76,21 @@ class RelabelingTest(TestCase):
         print('nmi after merging the closest pairs: ' + str(nmi_merge))
         self.assertTrue(nmi_merge >= nmi_base - 0.2)
         self.assertEqual(w_merge.shape[0], w.shape[0] - 1)
+
+    def test_new(self):
+        """
+        Tests creating a new cluster from a selection of cells
+        """
+        data_subset = self.data_subset
+        m = self.m
+        w = self.w
+        selected_cells = list(range(375, w.shape[1]))
+        m_new, w_new = relabeling.new_cluster(data_subset, m, w,
+                selected_cells, max_iters=20, inner_max_iters=50)
+        nmi_base = nmi(self.labels, w.argmax(0))
+        nmi_new = nmi(self.labels, w_new.argmax(0))
+        self.assertTrue(w_new.shape[0] == 9)
+        print('nmi after creating a new cluster: ' + str(nmi_new))
+        self.assertTrue(nmi_new >= nmi_base - 0.1)
+        self.assertEqual(w_new.shape[0], w.shape[0] + 1)
+        self.assertTrue(sum((w_new.argmax(0)[selected_cells] == 8)) >= len(selected_cells)/2)

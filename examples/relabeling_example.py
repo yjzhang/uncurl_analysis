@@ -52,7 +52,7 @@ clusters = w.argmax(0)
 cluster_counts = Counter(clusters)
 top_cluster, top_count = cluster_counts.most_common()[0]
 
-m_split, w_split = relabeling.split_cluster_cells(data_subset, m, w, top_cluster)
+m_split, w_split = relabeling.split_cluster(data_subset, m, w, top_cluster)
 print('nmi after splitting the largest cluster: ' + str(nmi(labels, w_split.argmax(0))))
 
 # 7. merge the min distance pair

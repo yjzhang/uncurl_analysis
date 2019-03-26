@@ -3,7 +3,7 @@ import os
 from unittest import TestCase
 import shutil
 
-
+import uncurl
 from uncurl_analysis import sc_analysis
 
 from scipy import sparse
@@ -24,8 +24,9 @@ class SCAnalysisTest(TestCase):
             shutil.rmtree(self.data_dir)
             os.makedirs(self.data_dir)
         self.data = sparse.csc_matrix(dat['data'])
-        # take subset of 5000 genes
-        self.data = self.data[5000:10000,:]
+        # take subset of max variance genes
+        top_genes = uncurl.preprocessing.max_variance_genes(self.data)
+        self.data = self.data[top_genes, :]
         scipy.io.mmwrite(os.path.join(self.data_dir, 'data.mtx'), self.data)
         shutil.copy('data/10x_pooled_400_gene_names.tsv', os.path.join(self.data_dir, 'gene_names.txt'))
 
@@ -192,8 +193,11 @@ class SCAnalysisTest(TestCase):
 
 
 
-    """
-    def test_merge_cluster(self):
+    def test_merge_new_cluster(self):
+        """
+        tests merging clusters, and creating new clusters from a subset of
+        cells.
+        """
         sca = sc_analysis.SCAnalysis(self.data_dir,
                 clusters=8,
                 data_filename='data.mtx',
@@ -202,23 +206,19 @@ class SCAnalysisTest(TestCase):
                 max_iters=20,
                 inner_max_iters=20)
         sca.run_full_analysis()
+        print(sca.w_sampled.argmax(0))
         # merge two clusters....
-        distance_matrix = np.zeros((8,8))
-        min_distance_pair = (0,0)
-        min_distance = 1e10
-        for i in range(8):
-            for j in range(8):
-                distance_matrix[i,j] = uncurl.sparse_utils.poisson_dist(m[:,i], m[:,j])
-                if i != j and distance_matrix[i,j] < min_distance:
-                    min_distance = distance_matrix[i,j]
-                    min_distance_pair = (i,j)
-        m_merge, w_merge = relabeling.merge_clusters(data_subset, m, w,
-                        min_distance_pair)
+        pair = [0, 1]
+        sca.recluster('merge', pair)
+        print(sca.w_sampled.argmax(0))
         clusters = sca.w.argmax(0)
         cluster_counts = Counter(clusters)
         top_cluster, top_count = cluster_counts.most_common()[0]
-        sca.recluster('split', [top_cluster])
         sca.run_post_analysis()
-        self.assertEqual(sca.clusters, 9)
-        self.assertEqual(self.w_sampled.shape[0], 9)
-    """
+        self.assertEqual(sca.clusters, 7)
+        self.assertEqual(sca.w_sampled.shape[0], 7)
+        # TODO: due to sampling, this won't actually be the cluster 7 cells...
+        selected_cells = list(range(350, sca.w_sampled.shape[1]))
+        sca.recluster('new', selected_cells)
+        self.assertEqual(sca.clusters, 8)
+        self.assertEqual(sca.w_sampled.shape[0], 8)

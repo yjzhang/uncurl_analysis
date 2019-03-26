@@ -125,7 +125,7 @@ def uncurl_test_1_vs_rest(np.ndarray[double, ndim=2] m, np.ndarray[double, ndim=
     cdef Py_ssize_t genes = m.shape[0]
     cdef Py_ssize_t cells = w.shape[1]
     cdef Py_ssize_t g, i, j, k
-    cdef double pv, ratio, in_cluster_counts, not_in_cluster_counts, counts1, counts2, var1, var2
+    cdef double pv, ratio, in_cluster_counts, not_in_cluster_counts, counts1, counts2, var1, var2, log_not_in_cluster_counts
     cdef np.ndarray[double, ndim=1] cell_counts = np.zeros(cells)
     # cluster_cell_counts is the total counts of each cluster if mode=='counts', or the number of cells in each cluster otherwise.
     cdef np.ndarray[double, ndim=1] cluster_cell_counts = np.zeros(n_clusters)
@@ -133,7 +133,9 @@ def uncurl_test_1_vs_rest(np.ndarray[double, ndim=2] m, np.ndarray[double, ndim=
     # cluster_gene_counts is the counts of each cluster for one gene
     cdef np.ndarray[double, ndim=1] cluster_gene_counts = np.zeros(n_clusters)
     # these are only necessary for t-tests
-    cdef np.ndarray[double, ndim=1] cluster_gene_counts_sq
+    cdef np.ndarray[double, ndim=1] log_gene_matrix
+    cdef np.ndarray[double, ndim=1] log_cluster_gene_counts
+    cdef np.ndarray[double, ndim=1] log_cluster_gene_counts_sq
     # outputs
     cdef np.ndarray[double, ndim=2] all_pvs = np.zeros((genes, n_clusters))
     cdef np.ndarray[double, ndim=2] all_ratios = np.zeros((genes, n_clusters))
@@ -149,22 +151,27 @@ def uncurl_test_1_vs_rest(np.ndarray[double, ndim=2] m, np.ndarray[double, ndim=
         cluster_gene_counts = np.zeros(n_clusters)
         gene_matrix = np.dot(m[g, :], w)
         if use_t_test:
-            cluster_gene_counts_sq = np.zeros(n_clusters)
+            log_gene_matrix = np.log2(gene_matrix)
+            log_cluster_gene_counts = np.zeros(n_clusters)
+            log_cluster_gene_counts_sq = np.zeros(n_clusters)
         for i in range(cells):
             j = clusters[i]
             cluster_gene_counts[j] += gene_matrix[i]
             if use_t_test:
-                cluster_gene_counts_sq[j] += gene_matrix[i]**2
+                log_cluster_gene_counts[j] += log_gene_matrix[i]
+                log_cluster_gene_counts_sq[j] += log_gene_matrix[i]**2
         for k in range(n_clusters):
             in_cluster_counts = cluster_gene_counts[k]
             not_in_cluster_counts = cluster_gene_counts[:k].sum() + cluster_gene_counts[k+1:].sum()
+            if use_t_test:
+                log_not_in_cluster_counts = log_cluster_gene_counts[:k].sum() + log_cluster_gene_counts[k+1:].sum()
             counts1 = cluster_cell_counts[k]
             counts2 = cluster_cell_counts[:k].sum() + cluster_cell_counts[k+1:].sum()
             if use_t_test:
-                var1 = (in_cluster_counts/(counts1+EPS))**2 - cluster_gene_counts_sq[k]/(counts1+EPS)
-                var2 = (not_in_cluster_counts/(counts2+EPS))**2 - \
-                        (cluster_gene_counts_sq[:k].sum() + cluster_gene_counts_sq[k+1:].sum())/(counts2 + EPS)
-                pv = t_test(in_cluster_counts, not_in_cluster_counts, var1, var2, counts1, counts2)
+                var1 = log_cluster_gene_counts_sq[k]/(counts1+EPS) - (log_cluster_gene_counts[k]/(counts1+EPS))**2
+                var2 = (log_cluster_gene_counts_sq[:k].sum() + log_cluster_gene_counts_sq[k+1:].sum())/(counts2 + EPS) \
+                        - (log_not_in_cluster_counts/(counts2+EPS))**2
+                pv = t_test(log_cluster_gene_counts[k], log_not_in_cluster_counts, var1, var2, counts1, counts2)
                 ratio = (in_cluster_counts/counts1 + EPS)/(not_in_cluster_counts/counts2 + EPS)
             else:
                 pv, ratio = log_wald_poisson_test_counts(in_cluster_counts, not_in_cluster_counts, counts1, counts2)
@@ -203,12 +210,14 @@ def uncurl_test_pairwise(np.ndarray[double, ndim=2] m, np.ndarray[double, ndim=2
     # cluster_gene_counts is the counts of each cluster for one gene
     cdef np.ndarray[double, ndim=1] cluster_gene_counts = np.zeros(n_clusters)
     # these are only necessary for t-tests
-    cdef np.ndarray[double, ndim=1] cluster_gene_counts_sq
+    cdef np.ndarray[double, ndim=1] log_gene_matrix
+    cdef np.ndarray[double, ndim=1] log_cluster_gene_counts
+    cdef np.ndarray[double, ndim=1] log_cluster_gene_counts_sq
     # outputs
     cdef np.ndarray[double, ndim=3] all_pvs = np.zeros((genes, n_clusters, n_clusters))
     cdef np.ndarray[double, ndim=3] all_ratios = np.zeros((genes, n_clusters, n_clusters))
     # TODO: if test is 't', calculate mean and variance across cells
-    # use an online mean/variance algorithm, just for computational efficiency?
+    # TODO: possibly use log-transformed data for the t-test?
     if mode == 'counts':
         for i in range(cells):
             cell_counts[i] += m.dot(w[:,i]).sum()
@@ -221,12 +230,15 @@ def uncurl_test_pairwise(np.ndarray[double, ndim=2] m, np.ndarray[double, ndim=2
         cluster_gene_counts = np.zeros(n_clusters)
         gene_matrix = np.dot(m[g, :], w)
         if use_t_test:
-            cluster_gene_counts_sq = np.zeros(n_clusters)
+            log_gene_matrix = np.log2(gene_matrix)
+            log_cluster_gene_counts = np.zeros(n_clusters)
+            log_cluster_gene_counts_sq = np.zeros(n_clusters)
         for i in range(cells):
             j = clusters[i]
             cluster_gene_counts[j] += gene_matrix[i]
             if use_t_test:
-                cluster_gene_counts_sq[j] += gene_matrix[i]**2
+                log_cluster_gene_counts[j] += log_gene_matrix[i]
+                log_cluster_gene_counts_sq[j] += log_gene_matrix[i]**2
         for k1 in range(n_clusters):
             in_cluster_counts = cluster_gene_counts[k1]
             counts1 = cluster_cell_counts[k1]
@@ -234,10 +246,10 @@ def uncurl_test_pairwise(np.ndarray[double, ndim=2] m, np.ndarray[double, ndim=2
                 not_in_cluster_counts = cluster_gene_counts[k2]
                 counts2 = cluster_cell_counts[k2]
                 if use_t_test:
-                    var1 = (in_cluster_counts/(counts1+EPS))**2 - cluster_gene_counts_sq[k2]/(counts1+EPS)
-                    var2 = (not_in_cluster_counts/(counts2+EPS))**2 - cluster_gene_counts_sq[k2]/(counts2 + EPS)
+                    var1 = log_cluster_gene_counts_sq[k1]/(counts1+EPS) - (log_cluster_gene_counts[k1]/(counts1+EPS))**2
+                    var2 = log_cluster_gene_counts_sq[k2]/(counts2+EPS) - (log_cluster_gene_counts[k2]/(counts2+EPS))**2
                     pv = t_test(in_cluster_counts, not_in_cluster_counts, var1, var2, counts1, counts2)
-                    ratio = (in_cluster_counts/counts1 + EPS)/(not_in_cluster_counts/counts2 + EPS)
+                    ratio = (in_cluster_counts/(counts1 + EPS))/((not_in_cluster_counts/counts2 + EPS))
                 else:
                     pv, ratio = log_wald_poisson_test_counts(in_cluster_counts, not_in_cluster_counts, counts1, counts2)
                 all_pvs[g, k1, k2] = pv

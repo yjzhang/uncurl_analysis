@@ -77,6 +77,7 @@ def split_cluster(data, m_old, w_old, cluster_to_split, **uncurl_params):
             **uncurl_params)
     return m_new, w_new
 
+
 def merge_clusters(data, m_old, w_old, clusters_to_merge,
         rerun_uncurl=True, **uncurl_params):
     """
@@ -122,6 +123,42 @@ def merge_clusters(data, m_old, w_old, clusters_to_merge,
             init_weights=w_init,
             **uncurl_params)
     return m_new, w_new
+
+
+def new_cluster(data, m_old, w_old, cells_to_add,
+        rerun_uncurl=True, **uncurl_params):
+    """
+    Creates a new cluster by assigning all the selected cells to the new cluster.
+
+    Args:
+        data: array of shape genes, cells
+        m_old: array of shape genes, k
+        w_old: array of shape k, cells
+        cells_to_add: array or list of ints representing indices to add
+        rerun_uncurl (bool):
+
+    Returns a new m and w.
+    """
+    k = m_old.shape[1] + 1
+    genes = m_old.shape[0]
+    cells = w_old.shape[1]
+    m_init = np.zeros((genes, k))
+    w_init = np.zeros((k, cells))
+    m_init[:, :k-1] = m_old
+    w_init[:k-1, :] = w_old
+    m_init[:, k-1] = data[:, cells_to_add].mean(1).A1
+    w_init[k-1, cells_to_add] = 0.9
+    w_init[:k-1, cells_to_add] = 0.1/(k-1)
+    if rerun_uncurl:
+        m_new, w_new, ll_new = uncurl.run_state_estimation(data,
+                clusters=k,
+                init_means=m_init,
+                init_weights=w_init,
+                **uncurl_params)
+        return m_new, w_new
+    else:
+        return m_init, w_init
+
 
 def delete_cluster(data, m_old, w_old, cluster_to_delete, **uncurl_params):
     """

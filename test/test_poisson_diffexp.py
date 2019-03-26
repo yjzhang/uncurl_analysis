@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import scipy.io
 import uncurl
+from uncurl import simulation
 
 from uncurl_analysis import poisson_diffexp
 
@@ -57,7 +58,6 @@ class DiffexpTest(unittest.TestCase):
         self.assertTrue((all_pvs < 0.01).sum() > 100)
 
     def test_simulated_data(self):
-        from uncurl import simulation
         data, clusters = simulation.generate_poisson_data(np.array([[1.0, 100], [100, 1.0]]), 100)
         pvs, ratios, _ = poisson_diffexp.poisson_test_known_groups(data, clusters, test_mode='1_vs_rest')
         self.assertTrue(pvs[0, 1] < 0.001)
@@ -70,7 +70,7 @@ class DiffexpTest(unittest.TestCase):
         self.assertTrue(pvs[1, 0, 1] < 0.001)
         self.assertFalse(pvs[1, 1, 1] < 0.05)
         data, clusters = simulation.generate_poisson_data(np.array([[1.0, 5], [5, 1.0], [0.1, 0.1], [0.4, 0.1]]), 500)
-        pvs, ratios, _ = poisson_diffexp.poisson_test_known_groups(data, clusters, test_mode='1_vs_rest')
+        pvs, ratios, _ = poisson_diffexp.poisson_test_known_groups(data, clusters, test_mode='1_vs_rest', mode='cells')
         print(pvs)
         print(ratios)
         self.assertTrue(pvs[0, 1] < 0.05)
@@ -78,6 +78,19 @@ class DiffexpTest(unittest.TestCase):
         self.assertTrue(pvs[3, 0] < 0.05)
         self.assertFalse(pvs[2, 1] < 0.05)
         self.assertFalse(pvs[2, 0] < 0.05)
+
+    def test_simulated_uncurl_t_test(self):
+        data, clusters = simulation.generate_poisson_data(np.array([[1.0, 5], [5, 1.0], [0.1, 0.1], [0.4, 0.1]]), 500)
+        pvs, ratios, _ = poisson_diffexp.poisson_test_known_groups(data, clusters, test='t', test_mode='1_vs_rest', mode='counts')
+        print(pvs)
+        print(ratios)
+        self.assertTrue(pvs[0, 1] < 0.05)
+        self.assertTrue(pvs[1, 0] < 0.05)
+        self.assertTrue(pvs[3, 0] < 0.05)
+        self.assertFalse(pvs[2, 1] < 0.05)
+        self.assertFalse(pvs[2, 0] < 0.05)
+
+
 
 
 if __name__ == '__main__':
