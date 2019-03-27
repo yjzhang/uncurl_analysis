@@ -92,7 +92,7 @@ class OverexpressedGenesTest(TestCase):
 
     def test_simulated_data(self):
         from uncurl import simulation
-        data, clusters = simulation.generate_poisson_data(np.array([[1.0, 10.0], [10.0, 1.0]]), 100)
+        data, clusters = simulation.generate_poisson_data(np.array([[1.0, 10.0], [10.0, 1.0], [0.5, 0.5]]), 100)
         data_csc = sparse.csc_matrix(data)
         ratios, pvals = pairwise_t(data_csc, clusters, eps=1e-8)
         print(ratios)
@@ -100,4 +100,6 @@ class OverexpressedGenesTest(TestCase):
         print(pvals)
         self.assertTrue(np.abs(ratios[0,1,1] - data[1, clusters==0].mean()/data[1, clusters==1].mean()) < 1.0)
         self.assertTrue(pvals[0,1,1] < 0.01)
+        self.assertTrue(pvals[1,0,0] < 0.01)
+        self.assertTrue(pvals[0,1,2] > 0.05)
 

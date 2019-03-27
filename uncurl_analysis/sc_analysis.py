@@ -821,7 +821,7 @@ class SCAnalysis(object):
         if color_track_name in self.color_tracks:
             is_discrete, filename = self.color_tracks[color_track_name]
             if is_discrete:
-                data = np.load(filename)
+                data = np.load(filename).astype(str)
             else:
                 data = np.load(filename)
             data = data[self.cell_subset][self.cell_sample]
@@ -850,7 +850,7 @@ class SCAnalysis(object):
         return colors
 
 
-    def calculate_diffexp(self, color_track_name):
+    def calculate_diffexp(self, color_track_name, mode='1_vs_rest', calc_pvals=True):
         """
         Calculates 1 vs rest differential expression for a custom
         color track.
@@ -859,11 +859,16 @@ class SCAnalysis(object):
         if not is_discrete:
             return None
         data = self.data_sampled_all_genes
-        # TODO: convert color track to ints
-        scores, pvals = gene_extraction.one_vs_rest_t(data, color_track,
-                    eps=float(5*len(set(color_track)))/data.shape[1],
-                    calc_pvals=False)
-        return scores
+        if mode == '1_vs_rest':
+            scores, pvals = gene_extraction.one_vs_rest_t(data, color_track,
+                        eps=float(5*len(set(color_track)))/data.shape[1],
+                        calc_pvals=calc_pvals)
+            return scores, pvals
+        elif mode == 'pairwise':
+            scores, pvals = gene_extraction.pairwise_t(data, color_track,
+                        eps=float(5*len(set(color_track)))/data.shape[1],
+                        calc_pvals=calc_pvals)
+            return scores, pvals
 
 
     def save_json_reset(self):
