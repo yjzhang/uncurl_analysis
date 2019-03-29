@@ -8,7 +8,7 @@ from scipy import sparse
 import uncurl
 from uncurl.sparse_utils import symmetric_kld
 
-from . import gene_extraction, relabeling, sparse_matrix_h5
+from . import gene_extraction, relabeling, sparse_matrix_h5, dense_matrix_h5
 from .entropy import entropy
 
 from sklearn.decomposition import PCA, TruncatedSVD
@@ -176,10 +176,10 @@ class SCAnalysis(object):
         self.has_pvals_1_vs_rest = os.path.exists(self.pvals_1_vs_rest_f)
         self._pvals_1_vs_rest = None
 
-        self.t_scores_f = os.path.join(data_dir, 't_scores.npy')
+        self.t_scores_f = os.path.join(data_dir, 't_scores.h5')
         self.has_t_scores = os.path.exists(self.t_scores_f)
         self._t_scores = None
-        self.t_pvals_f = os.path.join(data_dir, 't_pvals.npy')
+        self.t_pvals_f = os.path.join(data_dir, 't_pvals.h5')
         self.has_t_pvals = os.path.exists(self.t_pvals_f)
         self._t_pvals = None
         self.separation_scores_f = os.path.join(data_dir, 'separation_scores.txt')
@@ -573,7 +573,7 @@ class SCAnalysis(object):
     def t_scores(self):
         if self._t_scores is None:
             if self.has_t_scores:
-                self._t_scores = np.load(self.t_scores_f)
+                self._t_scores = dense_matrix_h5.load_array(self.t_scores_f)
             else:
                 t = time.time()
                 # this is complicated because we only want the cell subset,
@@ -589,21 +589,35 @@ class SCAnalysis(object):
                 self._t_scores, self._t_pvals = gene_extraction.pairwise_t(
                         data, labels,
                         eps=float(5*len(set(labels)))/data.shape[1])
-                np.save(self.t_scores_f, self._t_scores)
-                np.save(self.t_pvals_f, self._t_pvals)
+                dense_matrix_h5.store_array(self.t_scores_f, self._t_scores)
+                dense_matrix_h5.store_array(self.t_pvals_f, self._t_pvals)
                 self.has_t_scores = True
                 self.has_t_pvals = True
                 self.profiling['t_scores'] = time.time() - t
         return self._t_scores
 
+    def t_scores_view(self):
+        """Returns a read-only view of the t-scores; doesn't require loading the whole array"""
+        if self._t_scores is None:
+            if self.has_t_scores:
+                return dense_matrix_h5.load_array_view(self.t_scores_f)
+        return self.t_scores
+
     @property
     def t_pvals(self):
         if self._t_pvals is None:
             if self.has_t_pvals:
-                self._t_pvals = np.load(self.t_pvals_f)
+                self._t_pvals = dense_matrix_h5.load_array(self.t_pvals_f)
             else:
                 self.t_scores
         return self._t_pvals
+
+    def t_pvals_view(self):
+        """Returns a read-only view of the t-pval; doesn't require loading the whole array"""
+        if self._t_pvals is None:
+            if self.has_t_pvals:
+                return dense_matrix_h5.load_array_view(self.t_pvals_f)
+        return self.t_pvals
 
     @property
     def top_genes_1_vs_rest(self):
@@ -751,6 +765,7 @@ class SCAnalysis(object):
         if ',' in gene_name:
             gene_names = gene_name.split(',')
             data = self.data_sampled_gene(gene_names[0].strip())
+            # TODO: this is causing an error
             for g in gene_names[1:]:
                 result = self.data_sampled_gene(g.strip(), use_mw)
                 data += result
@@ -805,12 +820,16 @@ class SCAnalysis(object):
         color_track_filename = 'color_track_' + color_track_name[:20] + '.npy'
         color_track_filename = os.path.join(self.data_dir, color_track_filename)
         np.save(color_track_filename, color_data)
-        self.color_tracks[color_track_name] = (is_discrete, color_track_filename)
+        self.color_tracks[color_track_name] = {'is_discrete': is_discrete, 'color_track_filename': color_track_filename}
         with open(self.color_tracks_f, 'w') as f:
             json.dump(self.color_tracks, f,
                     cls=SimpleEncoder)
 
     def get_color_track(self, color_track_name):
+        """
+        Returns a tuple for a given color track name: data, is_discrete, where
+        data is a 1d array, and is_discrete is a boolean.
+        """
         if not hasattr(self, '_color_tracks_cache'):
             self._color_tracks_cache = {}
         try:
@@ -819,7 +838,12 @@ class SCAnalysis(object):
         except:
             pass
         if color_track_name in self.color_tracks:
-            is_discrete, filename = self.color_tracks[color_track_name]
+            if isinstance(self.color_tracks[color_track_name], tuple):
+                is_discrete, filename = self.color_tracks[color_track_name]
+            else:
+                results = self.color_tracks[color_track_name]
+                is_discrete = results['is_discrete']
+                filename = results['color_track_filename']
             if is_discrete:
                 data = np.load(filename).astype(str)
             else:
@@ -855,20 +879,52 @@ class SCAnalysis(object):
         Calculates 1 vs rest differential expression for a custom
         color track.
         """
+        # first, try to retrieve results from disk...
         color_track, is_discrete = self.get_color_track(color_track_name)
         if not is_discrete:
             return None
+        results = self.color_tracks[color_track_name]
+        if mode + '_scores' in results and mode + '_pvals' in results:
+            scores_filename = results[mode + '_scores']
+            pvals_filename = results[mode + '_pvals']
+            if mode == '1_vs_rest':
+                scores = dense_matrix_h5.H5Dict(scores_filename)
+                pvals = dense_matrix_h5.H5Dict(pvals_filename)
+            elif mode == 'pairwise':
+                scores = dense_matrix_h5.H5Array(scores_filename)
+                pvals = dense_matrix_h5.H5Array(pvals_filename)
+            return scores, pvals
+        # try to calculate diffexp, if values don't exist, and save results.
+        scores_filename = os.path.join(self.data_dir,
+                'diffexp_scores_' + color_track_name + '_' + mode + '_' + str(calc_pvals) + '.h5')
+        pvals_filename = os.path.join(self.data_dir,
+                'diffexp_pvals_' + color_track_name + '_' + mode + '_' + str(calc_pvals) + '.h5')
         data = self.data_sampled_all_genes
         if mode == '1_vs_rest':
             scores, pvals = gene_extraction.one_vs_rest_t(data, color_track,
                         eps=float(5*len(set(color_track)))/data.shape[1],
                         calc_pvals=calc_pvals)
-            return scores, pvals
+            dense_matrix_h5.store_dict(scores_filename, scores)
+            dense_matrix_h5.store_dict(pvals_filename, pvals)
         elif mode == 'pairwise':
             scores, pvals = gene_extraction.pairwise_t(data, color_track,
                         eps=float(5*len(set(color_track)))/data.shape[1],
                         calc_pvals=calc_pvals)
-            return scores, pvals
+            dense_matrix_h5.store_array(scores_filename, scores)
+            dense_matrix_h5.store_array(pvals_filename, pvals)
+        result = self.color_tracks[color_track_name]
+        if isinstance(result, dict):
+            self.color_tracks[color_track_name][mode + '_scores'] = scores_filename
+            self.color_tracks[color_track_name][mode + '_pvals'] = pvals_filename
+        else:
+            self.color_tracks[color_track_name] = {'is_discrete': result[0], 'color_track_filename': result[1]}
+            self.color_tracks[color_track_name][mode + '_scores'] = scores_filename
+            self.color_tracks[color_track_name][mode + '_pvals'] = pvals_filename
+        with open(self.color_tracks_f, 'w') as f:
+            json.dump(self.color_tracks, f,
+                    cls=SimpleEncoder)
+        return scores, pvals
+
 
 
     def save_json_reset(self):

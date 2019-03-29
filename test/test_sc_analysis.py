@@ -25,8 +25,6 @@ class SCAnalysisTest(TestCase):
             os.makedirs(self.data_dir)
         self.data = sparse.csc_matrix(dat['data'])
         # take subset of max variance genes
-        top_genes = uncurl.preprocessing.max_variance_genes(self.data)
-        self.data = self.data[top_genes, :]
         scipy.io.mmwrite(os.path.join(self.data_dir, 'data.mtx'), self.data)
         shutil.copy('data/10x_pooled_400_gene_names.tsv', os.path.join(self.data_dir, 'gene_names.txt'))
 
@@ -41,7 +39,7 @@ class SCAnalysisTest(TestCase):
     def test_run_uncurl(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
                 clusters=8,
-                frac=0.5,
+                frac=0.2,
                 data_filename='data.mtx',
                 max_iters=20,
                 inner_max_iters=50)
@@ -57,6 +55,7 @@ class SCAnalysisTest(TestCase):
 
     def test_dim_red_sample(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
+                frac=0.2,
                 clusters=8,
                 data_filename='data.mtx',
                 cell_frac=0.2,
@@ -72,6 +71,7 @@ class SCAnalysisTest(TestCase):
     def test_dim_red_2(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
                 clusters=8,
+                frac=0.2,
                 data_filename='data.mtx',
                 dim_red_option='UMAP',
                 baseline_dim_red='UMAP',
@@ -92,6 +92,7 @@ class SCAnalysisTest(TestCase):
     def test_run_full_analysis(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
                 clusters=8,
+                frac=0.2,
                 data_filename='data.mtx',
                 baseline_dim_red='tsvd',
                 dim_red_option='MDS',
@@ -123,6 +124,7 @@ class SCAnalysisTest(TestCase):
 
     def test_json(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
+                frac=0.2,
                 clusters=8,
                 data_filename='data.mtx',
                 baseline_dim_red='tsvd',
@@ -142,6 +144,7 @@ class SCAnalysisTest(TestCase):
 
     def test_split_cluster(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
+                frac=0.2,
                 clusters=8,
                 data_filename='data.mtx',
                 baseline_dim_red='tsvd',
@@ -170,11 +173,17 @@ class SCAnalysisTest(TestCase):
                 cell_frac=1.0,
                 max_iters=20,
                 inner_max_iters=10)
-        gene_info = sca.data_sampled_gene('AGRN')
-        self.assertEqual(gene_info.shape[0], sca.data_sampled_all_genes.shape[1])
+        import random
+        values = random.sample(range(len(sca.gene_names)), 100)
+        for i in values:
+            gene_name = sca.gene_names[i]
+            gene_info = sca.data_sampled_gene(gene_name)
+            self.assertTrue((gene_info == self.data[i,:]).all())
+            self.assertEqual(gene_info.shape[0], sca.data_sampled_all_genes.shape[1])
 
     def test_add_color_track(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
+                frac=0.2,
                 clusters=8,
                 data_filename='data.mtx',
                 baseline_dim_red='tsvd',
@@ -183,7 +192,7 @@ class SCAnalysisTest(TestCase):
                 max_iters=20,
                 inner_max_iters=10)
         sca.add_color_track('true_labels', self.labs, is_discrete=True)
-        true_labels, _ = sca.get_color_track('true_labels')
+        true_labels, is_discrete = sca.get_color_track('true_labels')
         self.assertTrue(nmi(true_labels, self.labs) > 0.99)
         top_genes, top_pvals = sca.calculate_diffexp('true_labels')
         self.assertEqual(len(top_genes), 8)
@@ -191,7 +200,15 @@ class SCAnalysisTest(TestCase):
         sca.add_color_track('true_labels_2', self.labs, is_discrete=False)
         true_labels_2, _ = sca.get_color_track('true_labels_2')
         self.assertTrue((true_labels_2.astype(int) == self.labs).all())
-
+        pairwise_genes, pairwise_pvals = sca.calculate_diffexp('true_labels', mode='pairwise')
+        self.assertEqual(pairwise_genes.shape, pairwise_pvals.shape)
+        pairwise_genes, pairwise_pvals = sca.calculate_diffexp('true_labels', mode='pairwise')
+        self.assertEqual(pairwise_genes.shape, pairwise_pvals.shape)
+        self.assertEqual(pairwise_genes.shape[0], 8)
+        top_genes, top_pvals = sca.calculate_diffexp('true_labels')
+        self.assertEqual(len(top_genes[0]), len(sca.gene_names))
+        self.assertEqual(len(top_genes), 8)
+        self.assertEqual(len(top_pvals), 8)
 
 
     def test_merge_new_cluster(self):
@@ -200,6 +217,7 @@ class SCAnalysisTest(TestCase):
         cells.
         """
         sca = sc_analysis.SCAnalysis(self.data_dir,
+                frac=0.2,
                 clusters=8,
                 data_filename='data.mtx',
                 baseline_dim_red='tsvd',
