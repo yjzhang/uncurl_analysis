@@ -838,7 +838,7 @@ class SCAnalysis(object):
         except:
             pass
         if color_track_name in self.color_tracks:
-            if isinstance(self.color_tracks[color_track_name], tuple):
+            if not isinstance(self.color_tracks[color_track_name], dict):
                 is_discrete, filename = self.color_tracks[color_track_name]
             else:
                 results = self.color_tracks[color_track_name]
