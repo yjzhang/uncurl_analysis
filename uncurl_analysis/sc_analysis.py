@@ -93,6 +93,10 @@ class SCAnalysis(object):
         self._init = None
 
         self.gene_names_f = os.path.join(data_dir, 'gene_names.txt')
+        if not os.path.exists(self.gene_names_f):
+            gf1 = os.path.join(data_dir, 'genes.csv')
+            if os.path.exists(gf1):
+                self.gene_names_f = gf1
         self._gene_names = None
 
         self.frac = frac
@@ -314,15 +318,25 @@ class SCAnalysis(object):
         Array of gene names
         """
         if self._gene_names is None:
-            try:
-                self._gene_names = np.loadtxt(self.gene_names_f, dtype=str)
-                if len(self._gene_names) <= 1:
+            if self.gene_names_f.endswith('.csv'):
+                import pandas as pd
+                try:
+                    gene_names = pd.read_csv(self.gene_names_f)
+                    self._gene_names = gene_names.gene_name
+                except:
+                    # default gene names
                     self._gene_names = np.array(['gene_{0}'.format(i) for i in range(self.data.shape[0])])
-                return self._gene_names
-            except:
-                # default gene names
-                self._gene_names = np.array(['gene_{0}'.format(i) for i in range(self.data.shape[0])])
-                return self._gene_names
+                    return self._gene_names
+            else:
+                try:
+                    self._gene_names = np.loadtxt(self.gene_names_f, dtype=str)
+                    if len(self._gene_names) <= 1:
+                        self._gene_names = np.array(['gene_{0}'.format(i) for i in range(self.data.shape[0])])
+                    return self._gene_names
+                except:
+                    # default gene names
+                    self._gene_names = np.array(['gene_{0}'.format(i) for i in range(self.data.shape[0])])
+                    return self._gene_names
         else:
             return self._gene_names
 
@@ -334,7 +348,7 @@ class SCAnalysis(object):
         init = None
         if self.has_init:
             init = self.init
-            # TODO: run qualNorm
+            # run qualNorm
             init = uncurl.qualNorm(self.data_subset, init)
         m, w, ll = uncurl.run_state_estimation(self.data_subset,
                 clusters=self.clusters,
