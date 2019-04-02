@@ -7,6 +7,7 @@ from uncurl import simulation
 
 from uncurl_analysis import poisson_diffexp
 
+@unittest.skip('poisson diffexp is currently unused')
 class DiffexpTest(unittest.TestCase):
 
     def setUp(self):
@@ -70,7 +71,7 @@ class DiffexpTest(unittest.TestCase):
         self.assertTrue(pvs[1, 0, 1] < 0.001)
         self.assertFalse(pvs[1, 1, 1] < 0.05)
         data, clusters = simulation.generate_poisson_data(np.array([[1.0, 5], [5, 1.0], [0.1, 0.1], [0.4, 0.1]]), 500)
-        pvs, ratios, _ = poisson_diffexp.poisson_test_known_groups(data, clusters, test_mode='1_vs_rest', mode='cells')
+        pvs, ratios, _ = poisson_diffexp.poisson_test_known_groups(data, clusters, test_mode='1_vs_rest', mode='counts')
         print(pvs)
         print(ratios)
         self.assertTrue(pvs[0, 1] < 0.05)
