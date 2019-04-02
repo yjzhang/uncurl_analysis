@@ -8,7 +8,7 @@ from scipy import sparse
 import uncurl
 from uncurl.sparse_utils import symmetric_kld
 
-from . import gene_extraction, relabeling, sparse_matrix_h5
+from . import gene_extraction, relabeling, sparse_matrix_h5, dense_matrix_h5
 from .entropy import entropy
 from .json_encoder import SimpleEncoder
 
@@ -20,7 +20,7 @@ import simplex_sample
 DIM_RED_OPTIONS = ['MDS', 'tSNE', 'TSVD', 'PCA', 'UMAP']
 
 # TODO: build a new SCAnalysis object...
-# somehow have UI hooks:
+# somehow have UI hooks?
 
 class SCAnalysisPlugin(object):
     """
@@ -50,7 +50,7 @@ class SCAnalysisPlugin(object):
                     this returns a list
                     of objects that corresponds to each of the names.
             options (dict): map of strings to their default values
-            helper_functions (list): list of function-parameters that are
+            helper_functions (list): list of functions that are
                     added to the SCObject, that depend on this plugin.
         """
         self.names = names
@@ -62,6 +62,7 @@ class SCAnalysisPlugin(object):
         self.creator_fn = creator_fn
         self.object_stores = [None for i in range(len(names))]
         self.options = options
+        self.helper_functions = helper_functions
 
     def loader(self, name, sc_object):
         """
@@ -101,6 +102,9 @@ class SCAnalysisPlugin(object):
             print('Error in saving file')
 
     def save_all(self, sc_object):
+        """
+        Saves every object created by this plugin.
+        """
         for name, index in self.name_indices.items():
             filename = self.filenames[index]
             saver_fn = self.saver_fns[index]
@@ -113,7 +117,8 @@ class SCAnalysisPlugin(object):
 
     def get(self, name, sc_object):
         """
-        Returns the object with the given name.
+        Returns the object with the given name. Returns None if it
+        isn't stored in memory.
         """
         index = self.name_indices[name]
         if self.object_stores[index] is None:
@@ -159,11 +164,15 @@ class SCAnalysisPlugin(object):
         del self.object_stores[:]
         self.object_stores = [None for i in range(len(self.names))]
 
-    def clear_files(self):
+    def clear_files(self, sc_object):
         """
         Deletes all files on disk
         """
-        # TODO
+        for filename in self.filenames:
+            try:
+                os.remove(os.path.join(sc_object.data_dir, filename))
+            except:
+                pass
 
     def add(self, sc_object):
         """
@@ -217,11 +226,23 @@ def null_saver(data, path, **params):
 def null_loader(path, **params):
     return None
 
-def h5_saver(data, path, **params):
+def sparse_h5_saver(data, path, **params):
     sparse_matrix_h5.store_matrix(data, path)
 
-def h5_loader(path, **params):
+def sparse_h5_loader(path, **params):
     return sparse_matrix_h5.load_matrix(path)
+
+def dense_h5_saver(data, path, **params):
+    dense_matrix_h5.store_array(path, data)
+
+def dense_h5_loader(path, **params):
+    return dense_matrix_h5.H5Array(path)
+
+def dense_h5_dict_saver(data, path, **params):
+    dense_matrix_h5.store_dict(path, data)
+
+def dense_h5_dict_loader(path, **params):
+    return dense_matrix_h5.H5Dict(path)
 
 def np_saver(data, path, **params):
     np.save(path, data)
@@ -286,7 +307,7 @@ def data_sampled_creator(data_subset, cell_sample, gene_subset_sampled, **kwargs
 
 def uncurl_kwargs_default(**kwargs):
     # TODO
-    return dict()
+    return dict(kwargs)
 
 def run_uncurl(data_subset, uncurl_kwargs, **kwargs):
     if uncurl_kwargs is None:
@@ -302,6 +323,11 @@ def run_dim_red(m, w, cell_sample, **kwargs):
 
 def run_baseline_dim_red(data_sampled, **kwargs):
     # TODO
+    pass
+
+##### Helper functions ##############################################
+
+def data_sampled_gene(sca, **kwargs):
     pass
 
 ##### plugins #######################################################
@@ -412,8 +438,8 @@ data_sampled_plugin = SCAnalysisPlugin(
         names=['data_sampled', 'data_sampled_all_genes'],
         filenames=['data_sampled.mtx', 'data_sampled_all_genes.h5'],
         dependencies=['data_subset', 'cell_sample', 'gene_subset_sampled'],
-        loader_fns=[data_loader, h5_loader],
-        saver_fns=[data_saver, h5_saver],
+        loader_fns=[data_loader, sparse_h5_loader],
+        saver_fns=[data_saver, sparse_h5_saver],
         creator_fn=data_sampled_creator,
         options={},
         helper_functions=[data_sampled_gene],
@@ -426,10 +452,11 @@ uncurl_kwargs_plugin = SCAnalysisPlugin(
         dependencies=[],
         loader_fns=[json_loader],
         saver_fns=[null_saver],
-        creator_fn=uncurk_kwargs_default,
+        creator_fn=uncurl_kwargs_default,
         options={}
 )
 
+# uncurl_plugin generates M and W
 uncurl_plugin = SCAnalysisPlugin(
         names=['m', 'w'],
         filenames=['m.txt', 'w.txt'],
@@ -447,7 +474,7 @@ dim_red_plugin = SCAnalysisPlugin(
         loader_fns=[dense_loader],
         saver_fns=[dense_saver],
         creator_fn=run_dim_red,
-        options={'dim_red_option': 'umap'},
+        options={'dim_red_option': 'tsne'},
 )
 
 baseline_dim_red_plugin = SCAnalysisPlugin(
@@ -457,7 +484,17 @@ baseline_dim_red_plugin = SCAnalysisPlugin(
         loader_fns=[dense_loader],
         saver_fns=[dense_saver],
         creator_fn=run_baseline_dim_red,
-        options={'dim_red_option': 'umap'},
+        options={'dim_red_option': 'tsne'},
+)
+
+pairwise_diffexp_plugin = SCAnalysisPlugin(
+        names=['t_scores', 't_pvals'],
+        filenames=['t_scores.h5', 't_pvals.h5'],
+        dependencies=['w'],
+        loader_fns=[json_loader, json_loader],
+        saver_fns=[json_saver, json_saver],
+        creator_fn=run_pairwise_diffexp,
+        options={},
 )
 
 top_genes_c_score_plugin = SCAnalysisPlugin(
@@ -471,8 +508,8 @@ top_genes_c_score_plugin = SCAnalysisPlugin(
 )
 
 top_genes_1_vs_rest_plugin = SCAnalysisPlugin(
-        names=['t_scores', 't_pvals', 'top_genes_1_vs_rest', 'pvals_1_vs_rest'],
-        filenames=['t_scores.npy', 't_pvals.npy', 'top_genes_1_vs_rest.txt',
+        names=['top_genes_1_vs_rest', 'pvals_1_vs_rest'],
+        filenames=['top_genes_1_vs_rest.txt',
             'gene_pvals_1_vs_rest.txt'],
         dependencies=['w'],
         loader_fns=[np_loader, np_loader, json_loader, json_loader],
@@ -482,7 +519,7 @@ top_genes_1_vs_rest_plugin = SCAnalysisPlugin(
 )
 
 
-# TODO
+# TODO: data tracks
 tracks_plugin = SCAnalysisPlugin(
         names=[''],
         filenames=[''],
@@ -501,6 +538,16 @@ ALL_DEFAULT_PLUGINS = [
         gene_names_plugin,
         gene_subset_plugin,
         cell_subset_plugin,
+        data_subset_plugin,
+        data_sampled_plugin,
+        uncurl_kwargs_plugin,
+        uncurl_plugin,
+        dim_red_plugin,
+        baseline_dim_red_plugin,
+        pairwise_diffexp_plugin,
+        top_genes_c_score_plugin,
+        top_genes_1_vs_rest_plugin,
+        tracks_plugin,
         ]
 
 ##### classes, default objects #######################################
@@ -564,6 +611,10 @@ class SCAnalysis2(object):
                     self.params['max_reads'] = int(params['max_reads'])
                     self.params['baseline_dim_red'] = params['baseline_vismethod']
                     self.params['dim_red_option'] = params['vismethod']
+                    for plugin in self.plugins:
+                        for key, val in self.params.items():
+                            if key in plugin:
+                                plugin.options[key] = val
                 except:
                     pass
         #if os.path.exists(os.path.join(self.data_dir, 'uncurl_kwargs.json')):

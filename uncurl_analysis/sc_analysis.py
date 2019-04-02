@@ -822,7 +822,7 @@ class SCAnalysis(object):
 
     def add_color_track(self, color_track_name, color_data, is_discrete=False):
         """
-        Adds an external color track to the analysis, for viewing.
+        Adds an external color track to the analysis, for viewing or diffexp calculations.
 
         color_data is a 1d numpy array.
         """
@@ -875,20 +875,7 @@ class SCAnalysis(object):
         print(self.color_tracks)
         return list(self.color_tracks.keys())
 
-
-    def get_diffexp_color_track_names(self):
-        """
-        Returns list of color track names that can be used for differential
-        expression (discrete color tracks).
-        """
-        colors = []
-        for key, vals in self.color_tracks.items():
-            if vals[0]:
-                colors.append(key)
-        return colors
-
-
-    def calculate_diffexp(self, color_track_name, mode='1_vs_rest', calc_pvals=True):
+    def calculate_diffexp(self, color_track_name, mode='1_vs_rest', calc_pvals=True, eps=None):
         """
         Calculates 1 vs rest differential expression for a custom
         color track.
@@ -914,15 +901,17 @@ class SCAnalysis(object):
         pvals_filename = os.path.join(self.data_dir,
                 'diffexp_pvals_' + color_track_name + '_' + mode + '_' + str(calc_pvals) + '.h5')
         data = self.data_sampled_all_genes
+        if eps is None:
+            eps = float(5*len(set(color_track)))/data.shape[1]
         if mode == '1_vs_rest':
             scores, pvals = gene_extraction.one_vs_rest_t(data, color_track,
-                        eps=float(5*len(set(color_track)))/data.shape[1],
+                        eps=eps,
                         calc_pvals=calc_pvals)
             dense_matrix_h5.store_dict(scores_filename, scores)
             dense_matrix_h5.store_dict(pvals_filename, pvals)
         elif mode == 'pairwise':
             scores, pvals = gene_extraction.pairwise_t(data, color_track,
-                        eps=float(5*len(set(color_track)))/data.shape[1],
+                        eps=eps,
                         calc_pvals=calc_pvals)
             dense_matrix_h5.store_array(scores_filename, scores)
             dense_matrix_h5.store_array(pvals_filename, pvals)
@@ -1063,6 +1052,17 @@ class SCAnalysis(object):
         self.has_separation_scores = False
         self._separation_scores = None
         self.separation_scores
+
+    def delete_uncurl_results(self):
+        """
+        Deletes all results based off uncurl from file.
+        """
+        # delete all files except the data, gene names, init.txt, and params.json
+        files_to_save = set(['data.txt', 'data.txt.gz', 'data.mtx', 'data.mtx.gz', 'init.txt', 'gene_names.txt', 'params.json',
+            'color_tracks.json'])
+        for filename in os.listdir(self.data_dir):
+            if filename not in files_to_save and not filename.startswith('color_track_') and not filename.startswith('diffexp_'):
+                os.remove(os.path.join(self.data_dir, filename))
 
     def get_data_subset(self, cell_ids):
         """
