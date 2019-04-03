@@ -1058,8 +1058,13 @@ class SCAnalysis(object):
         Deletes all results based off uncurl from file.
         """
         # delete all files except the data, gene names, init.txt, and params.json
-        files_to_save = set(['data.txt', 'data.txt.gz', 'data.mtx', 'data.mtx.gz', 'init.txt', 'gene_names.txt', 'params.json',
-            'color_tracks.json'])
+        # TODO: this shouldn't have to know so much stuff about the uncurl_app side
+        if files_to_save is None:
+            files_to_save = set([])
+        else:
+            files_to_save = set(files_to_save)
+        files_to_save.update(['data.txt', 'data.txt.gz', 'data.mtx', 'data.mtx.gz', 'init.txt', 'gene_names.txt', 'params.json',
+            'preprocess.json', 'color_tracks.json', 'vis_summary.html'])
         for filename in os.listdir(self.data_dir):
             if filename not in files_to_save and not filename.startswith('color_track_') and not filename.startswith('diffexp_'):
                 os.remove(os.path.join(self.data_dir, filename))
