@@ -2,6 +2,7 @@
 # gene lookup for a sparse matrix.
 
 # TODO: i just found out that h5sparse exists so maybe we could use that instead.
+import os
 
 import numpy as np
 from scipy import sparse
@@ -13,8 +14,11 @@ def store_matrix(lil_matrix, h5_filename):
 
     Args:
         lil_matrix: sparse matrix
-        h5_filename: path where a h5 file can be written
+        h5_filename: path where a h5 file can be written. If a file with that
+                name exists, it will be deleted.
     """
+    if os.path.exists(h5_filename):
+        os.remove(h5_filename)
     lil_matrix = sparse.lil_matrix(lil_matrix)
     filters = tables.Filters(complevel=5, complib='zlib')
     matrix_file = tables.open_file(h5_filename, mode='w', filters=filters,
@@ -28,7 +32,7 @@ def store_matrix(lil_matrix, h5_filename):
     rows = matrix_file.create_vlarray(matrix_file.root,
                     'rows', tables.Int64Atom(shape=()),
                     "ragged array of ints",
-                    filters=tables.Filters(1))
+                    filters=filters)
     for row in lil_matrix.rows:
         rows.append(row)
     shape = matrix_file.create_array(matrix_file.root,

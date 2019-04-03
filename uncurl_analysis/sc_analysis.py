@@ -1053,7 +1053,7 @@ class SCAnalysis(object):
         self._separation_scores = None
         self.separation_scores
 
-    def delete_uncurl_results(self):
+    def delete_uncurl_results(self, files_to_save=None):
         """
         Deletes all results based off uncurl from file.
         """

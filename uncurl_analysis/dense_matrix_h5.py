@@ -1,6 +1,6 @@
 # store numpy arrays in tables
+import os
 
-import numpy as np
 import tables
 
 class H5Array(object):
@@ -87,9 +87,12 @@ def store_array(h5_filename, data):
     Writes a numpy array to an h5 file
 
     Args:
-        h5_filename: path where a h5 file can be written
+        h5_filename: path where a h5 file can be written. If a file already
+            exists with that name, it will be deleted.
         data: np array
     """
+    if os.path.exists(h5_filename):
+        os.remove(h5_filename)
     filters = tables.Filters(complevel=5, complib='zlib')
     matrix_file = tables.open_file(h5_filename, mode='w', filters=filters,
             title='matrix')
@@ -104,7 +107,6 @@ def store_dict(h5_filename, data):
     Writes a dict to an h5 file, where each key is a separate node indexed
     at root.
     """
-    # TODO
     d = H5Dict(h5_filename)
     for key, value in data.items():
         d[key] = value
@@ -114,6 +116,7 @@ def load_array(h5_filename):
     f = tables.open_file(h5_filename, 'r')
     data_f = f.get_node('/data')
     data = data_f.read()
+    f.close()
     return data
 
 def load_array_view(h5_filename):
