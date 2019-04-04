@@ -19,9 +19,9 @@ class SCAnalysisTest(TestCase):
         self.labs = dat['labels'].flatten()
         self.data_dir = '/tmp/uncurl_analysis/test'
         try:
+            shutil.rmtree(self.data_dir)
             os.makedirs(self.data_dir)
         except:
-            shutil.rmtree(self.data_dir)
             os.makedirs(self.data_dir)
         self.data = sparse.csc_matrix(dat['data'])
         # take subset of max variance genes

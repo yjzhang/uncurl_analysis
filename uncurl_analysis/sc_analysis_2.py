@@ -606,6 +606,7 @@ class SCAnalysis2(object):
                     cls=SimpleEncoder)
 
 
+    # TODO: this was copied from sc_analysis.py and isn't going to work.
     def load_params_from_folder(self):
         """
         If there is a file called 'params.json' in the folder, this loads all the parameters from the file, and overwrites the current object.

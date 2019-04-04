@@ -475,7 +475,7 @@ class SCAnalysis(object):
         """
         data_subset = self.data_subset
         cell_sample = self.cell_sample
-        return data_subset[np.ix_(self.gene_subset, cell_sample)]
+        return data_subset[:, cell_sample]
 
     @property
     def data_sampled_all_genes(self):
@@ -1081,10 +1081,13 @@ class SCAnalysis(object):
         if os.path.exists(self.json_f):
             with open(self.json_f) as f:
                 p = json.load(f)
-                #self.__dict__ = p
-                for key, val in p.items():
-                    if key not in self.__dict__:
-                        self.__dict__[key] = val
+                self.__dict__ = p
+                #for key, val in p.items():
+                #    if key not in self.__dict__ or val != self.__dict__[key]:
+                #        # this is a terrible hack... basically don't overwrite the path existence checks
+                #        if key.startswith('has_') and val is False:
+                #            continue
+                #        self.__dict__[key] = val
                 if 'profiling' not in p:
                     self.profiling = {}
         if os.path.exists(os.path.join(self.data_dir, 'params.json')):
