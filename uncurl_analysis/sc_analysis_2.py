@@ -317,9 +317,22 @@ def run_uncurl(data_subset, uncurl_kwargs, **kwargs):
             **uncurl_kwargs)
     return m, w
 
+def update_m(data, m, w, gene_subset, **kwargs):
+    new_m = uncurl.update_m(data, m, w, gene_subset)
+    return new_m
+
 def run_dim_red(m, w, cell_sample, **kwargs):
     # TODO: run dim red on result of uncurl, and also generate the means view.
-    pass
+    dim_red_option = kwargs['dim_red_option'].lower()
+    if dim_red_option == 'tsne':
+        pass
+    elif dim_red_option == 'umap':
+        pass
+    elif dim_red_option == 'pca':
+        pass
+    elif dim_red_option == 'mds':
+        dim_red = uncurl.mds(m, w, 2)
+    return dim_red
 
 def run_baseline_dim_red(data_sampled, **kwargs):
     # TODO
@@ -464,6 +477,17 @@ uncurl_plugin = SCAnalysisPlugin(
         loader_fns=[dense_loader, dense_loader],
         saver_fns=[dense_saver, dense_saver],
         creator_fn=run_uncurl,
+        options={}
+)
+
+# update m with all genes
+m_full_plugin = SCAnalysisPlugin(
+        names=['m_full'],
+        filenames=['m_full.txt'],
+        dependencies=['data', 'm', 'w', 'gene_subset'],
+        loader_fns=[dense_loader],
+        saver_fns=[dense_saver],
+        creator_fns=update_m,
         options={}
 )
 

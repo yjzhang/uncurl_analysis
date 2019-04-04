@@ -791,7 +791,8 @@ class SCAnalysis(object):
         if use_mw:
             # we re-calculate the matrix multiplication every time...
             # and use caching to store the values???
-            m = self.m_sampled
+            # TODO: calculate
+            m = self.m_full
             w = self.w_sampled
             return m[gene_index,:].dot(w).flatten()
         else:
