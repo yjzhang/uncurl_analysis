@@ -137,10 +137,6 @@ class SCAnalysis(object):
         self.has_m_sampled = os.path.exists(self.m_sampled_f)
         self._m_sampled = None
 
-        self.gene_subset_sampled_f = os.path.join(data_dir, 'gene_subset_sampled.txt')
-        self.has_gene_subset_sampled = os.path.exists(self.gene_subset_sampled_f)
-        self._gene_subset_sampled = None
-
         self.cell_subset_f = os.path.join(data_dir, 'cells_subset.txt')
         self.has_cell_subset = os.path.exists(self.cell_subset_f)
         self._cell_subset = None
@@ -396,7 +392,7 @@ class SCAnalysis(object):
     @property
     def m_sampled(self):
         if not self.has_m_sampled:
-            return self.m[self.gene_subset_sampled, :]
+            return self.m
         else:
             if self._m_sampled is None:
                 self._m_sampled = np.loadtxt(self.m_sampled_f)
@@ -409,13 +405,14 @@ class SCAnalysis(object):
                 m_full = np.loadtxt(self.m_full_f)
                 self._m_full = m_full
             else:
+                print('calculating m_full')
                 m = self.m
                 w = self.w
-                data = self.data_subset
-                selected_genes = self.selected_genes
+                # data contains cell subset, but not gene subset
+                data = self.data[:, self.cell_subset]
+                selected_genes = self.gene_subset
                 self._m_full = uncurl.update_m(data, m, w, selected_genes,
                         **self.uncurl_kwargs)
-                self._m_full = self._m_full
                 self.has_m_full = True
                 np.savetxt(self.m_full_f, self._m_full)
         return self._m_full
@@ -469,21 +466,7 @@ class SCAnalysis(object):
                     np.savetxt(self.cell_sample_f, indices, fmt='%d')
                     self.has_cell_sample = True
                     self._cell_sample = indices
-
         return self._cell_sample
-
-    @property
-    def gene_subset_sampled(self):
-        if self._gene_subset_sampled is None:
-            if not self.has_gene_subset_sampled:
-                data_sampled = self.data_subset[:, self.cell_sample]
-                gene_subset_sampled = uncurl.max_variance_genes(data_sampled, 1, 1)
-                self._gene_subset_sampled = gene_subset_sampled
-                np.savetxt(self.gene_subset_sampled_f, gene_subset_sampled, fmt='%d')
-                self.has_gene_subset_sampled = True
-            else:
-                self._gene_subset_sampled = np.loadtxt(self.gene_subset_sampled_f, dtype=int)
-        return self._gene_subset_sampled
 
     @property
     def data_sampled(self):
@@ -492,7 +475,7 @@ class SCAnalysis(object):
         """
         data_subset = self.data_subset
         cell_sample = self.cell_sample
-        return data_subset[np.ix_(self.gene_subset_sampled, cell_sample)]
+        return data_subset[np.ix_(self.gene_subset, cell_sample)]
 
     @property
     def data_sampled_all_genes(self):
@@ -656,8 +639,6 @@ class SCAnalysis(object):
                 self._top_genes_1_vs_rest, self._pvals_1_vs_rest = gene_extraction.one_vs_rest_t(
                         data, labels,
                         eps=float(5*len(set(labels)))/data.shape[1])
-                print(self._top_genes_1_vs_rest.keys())
-                print(self._pvals_1_vs_rest.keys())
                 with open(self.top_genes_1_vs_rest_f, 'w') as f:
                     json.dump(self._top_genes_1_vs_rest, f,
                             cls=SimpleEncoder)
@@ -793,8 +774,9 @@ class SCAnalysis(object):
             # and use caching to store the values???
             # TODO: calculate
             m = self.m_full
-            w = self.w_sampled
-            return m[gene_index,:].dot(w).flatten()
+            w = self.w
+            data_subset = m[gene_index,:].dot(w).flatten()
+            return data_subset[self.cell_sample]
         else:
             if os.path.exists(self.data_sampled_all_genes_f):
                 return sparse_matrix_h5.load_row(
@@ -950,7 +932,6 @@ class SCAnalysis(object):
         self._mds_means = None
         self._labels = None
         self._cell_subset = None
-        self._gene_subset_sampled = None
         self._baseline_vis = None
         self._dim_red = None
         self._top_genes = None
@@ -1092,9 +1073,7 @@ class SCAnalysis(object):
 
     def load_params_from_folder(self):
         """
-        If there is a file called 'params.json' in the folder, this loads all the parameters from the file, and overwrites the current object.
-
-        If a saved pickle file exists in the folder, this returns that pickle object.
+        If there is a file called 'params.json' in the folder, this loads all the parameters from the file, and adds them to the current object.
 
         Returns:
             SCAnalysis object loaded from self.data_dir.
@@ -1102,10 +1081,12 @@ class SCAnalysis(object):
         if os.path.exists(self.json_f):
             with open(self.json_f) as f:
                 p = json.load(f)
-                self.__dict__ = p
+                #self.__dict__ = p
+                for key, val in p.items():
+                    if key not in self.__dict__:
+                        self.__dict__[key] = val
                 if 'profiling' not in p:
                     self.profiling = {}
-                return self
         if os.path.exists(os.path.join(self.data_dir, 'params.json')):
             with open(os.path.join(self.data_dir, 'params.json')) as f:
                 params = json.load(f)
