@@ -487,7 +487,7 @@ m_full_plugin = SCAnalysisPlugin(
         dependencies=['data', 'm', 'w', 'gene_subset'],
         loader_fns=[dense_loader],
         saver_fns=[dense_saver],
-        creator_fns=update_m,
+        creator_fn=update_m,
         options={}
 )
 

@@ -814,7 +814,7 @@ class SCAnalysis(object):
         # make color_track_name safe
         keep_chars = set(['-', '_', ' '])
         color_track_name = ''.join([c for c in color_track_name if c.isalnum() or (c in keep_chars)])
-        color_track_filename = 'color_track_' + color_track_name[:20] + '.npy'
+        color_track_filename = 'color_track_' + color_track_name[:50] + '.npy'
         color_track_filename = os.path.join(self.data_dir, color_track_filename)
         np.save(color_track_filename, color_data)
         self.color_tracks[color_track_name] = {'is_discrete': is_discrete, 'color_track_filename': color_track_filename}
@@ -845,7 +845,8 @@ class SCAnalysis(object):
                 data = np.load(filename).astype(str)
             else:
                 data = np.load(filename)
-            data = data[self.cell_subset][self.cell_sample]
+            if len(data) > len(self.cell_sample):
+                data = data[self.cell_subset][self.cell_sample]
             self._color_tracks_cache[color_track_name] = (data, is_discrete)
             return data, is_discrete
         else:
