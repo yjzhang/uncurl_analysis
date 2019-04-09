@@ -822,6 +822,32 @@ class SCAnalysis(object):
             json.dump(self.color_tracks, f,
                     cls=SimpleEncoder)
 
+    def create_custom_color_track(self, color_track_name):
+        """
+        Create a new custom discrete color track with the given name.
+        """
+        # TODO
+        keep_chars = set(['-', '_', ' '])
+        color_track_name = ''.join([c for c in color_track_name if c.isalnum() or (c in keep_chars)])
+        color_track_filename = 'color_track_' + color_track_name[:50] + '.npy'
+        color_track_filename = os.path.join(self.data_dir, color_track_filename)
+        # create new data vector with shape self.cell_sample 
+        color_data = np.repeat(['default'], len(self.cell_sample))
+        np.save(color_track_filename, color_data, fmt='%s')
+        self.color_tracks[color_track_name] = {'is_discrete': True, 'color_track_filename': color_track_filename}
+        with open(self.color_tracks_f, 'w') as f:
+            json.dump(self.color_tracks, f,
+                    cls=SimpleEncoder)
+
+    def update_custom_color_track(self, color_track_name, new_color_track_data):
+        """
+        Re-writes the color track info with the new color track info...
+        """
+        if hasattr(self, '_color_tracks_cache'):
+            self._color_tracks_cache[color_track_name] = new_color_track_data
+        is_discrete, color_track_filename = self.color_tracks[color_track_name]
+        np.save(color_track_filename, new_color_track_data, fmt='%s')
+
     def get_color_track(self, color_track_name):
         """
         Returns a tuple for a given color track name: data, is_discrete, where
