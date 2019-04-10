@@ -756,7 +756,6 @@ class SCAnalysis(object):
         a list of gene names, and this will return the sum of the levels of
         the input genes.
         """
-        # TODO: add an option to use MW instead of the original data.
         if ',' in gene_name:
             gene_names = gene_name.split(',')
             data = self.data_sampled_gene(gene_names[0].strip())
@@ -768,11 +767,13 @@ class SCAnalysis(object):
         gene_name_indices = np.where(self.gene_names == gene_name)[0]
         if len(gene_name_indices) == 0:
             return []
+        # TODO: what if there are multiple indices for a given gene name?
+        if len(gene_name_indices) > 1:
+            print('Warning: duplicate gene name detected. Returning arbitrary gene.')
         gene_index = gene_name_indices[0]
         if use_mw:
             # we re-calculate the matrix multiplication every time...
             # and use caching to store the values???
-            # TODO: calculate
             m = self.m_full
             w = self.w
             data_subset = m[gene_index,:].dot(w).flatten()

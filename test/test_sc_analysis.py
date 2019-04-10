@@ -177,10 +177,14 @@ class SCAnalysisTest(TestCase):
         values = random.sample(range(len(sca.gene_names)), 100)
         for i in values:
             gene_name = sca.gene_names[i]
+            if (sca.gene_names == gene_name).sum() > 1:
+                print('duplicate gene name')
+                continue
             gene_info = sca.data_sampled_gene(gene_name)
-            print(gene_info)
-            print(sca.data_sampled_all_genes[i, :])
-            print(self.data[i, :])
+            print('gene_index: ', i)
+            print('gene name: ', gene_name)
+            print('gene_info: ', gene_info)
+            print('sca.data_sampled_all_genes: ', sca.data_sampled_all_genes[i, :])
             self.assertTrue(np.abs(gene_info - sca.data_sampled_all_genes[i,:]).sum() < 0.01)
             self.assertEqual(gene_info.shape[0], sca.data_sampled_all_genes.shape[1])
 
@@ -244,3 +248,7 @@ class SCAnalysisTest(TestCase):
         sca.recluster('new', selected_cells)
         self.assertEqual(sca.clusters, 8)
         self.assertEqual(sca.w_sampled.shape[0], 8)
+
+if __name__ == '__main__':
+    import unittest
+    unittest.main()
