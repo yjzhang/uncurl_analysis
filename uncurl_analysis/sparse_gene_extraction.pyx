@@ -180,7 +180,7 @@ def csc_1_vs_rest_lists(np.ndarray[numeric, ndim=1] data,
             cluster_vals[k][g].append(data_[i2])
             for k2 in range(K):
                 if k2 != k:
-                    rest_cluster_vals[k][g].append(data_[i2])
+                    rest_cluster_vals[k2][g].append(data_[i2])
     return cluster_vals, rest_cluster_vals
 
 @cython.boundscheck(False)
@@ -415,7 +415,7 @@ def csc_unweighted_1_vs_rest_rank_sum_test(np.ndarray[numeric, ndim=1] data,
             log_data, indices, indptr, labels, cells, genes)
     base_means, rest_base_means, cluster_cell_counts = csc_1_vs_rest_cluster_means(
             data, indices, indptr, labels, cells, genes)
-    cluster_vals, rest_cluster_vals = csc_1_vs_rest_cluster_means(
+    cluster_vals, rest_cluster_vals = csc_1_vs_rest_lists(
             log_data, indices, indptr, labels, cells, genes)
     cdef long g, k
     cdef double[:,:] ratios = np.zeros((K, genes))
@@ -427,8 +427,14 @@ def csc_unweighted_1_vs_rest_rank_sum_test(np.ndarray[numeric, ndim=1] data,
         rest_genes = rest_cluster_vals[k]
         for g in range(genes):
             ratios[k, g] = (base_means[g, k] + eps)/(rest_base_means[g, k] + eps)
-            stat, pval = mannwhitneyu(cluster_genes, rest_genes, alternative='greater')
-            pvals[k, g] = pval
+            if ratios[k, g] > 1.0:
+                try:
+                    stat, pval = mannwhitneyu(cluster_genes[g], rest_genes[g], alternative='greater')
+                except:
+                    pval = 0.99
+                pvals[k, g] = pval
+            else:
+                pvals[k, g] = 0.99
     scores_output = {}
     pvals_output = {}
     for k in range(K):

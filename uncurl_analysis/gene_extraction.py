@@ -4,7 +4,7 @@ import sys
 import numpy as np
 from scipy import sparse
 
-from uncurl_analysis.sparse_gene_extraction import csc_c_scores, csc_weighted_c_scores, csc_weighted_t_test, csc_unweighted_t_test, t_test_c_scores, t_test_separation_scores, csc_unweighted_1_vs_rest_t_test
+from uncurl_analysis.sparse_gene_extraction import csc_c_scores, csc_weighted_c_scores, csc_weighted_t_test, csc_unweighted_t_test, t_test_c_scores, t_test_separation_scores, csc_unweighted_1_vs_rest_t_test, csc_unweighted_1_vs_rest_rank_sum_test
 
 # TODO: efficient sparse implementation of find_overexpressed_genes?
 def find_overexpressed_genes(data, labels, eps=0):
@@ -116,7 +116,7 @@ def pairwise_t(data, w_or_labels, eps=1.0, calc_pvals=True):
         # TODO: re-map keys? or would that mess up the c-score calculation?
     return scores, pvals
 
-def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True):
+def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True, test='t'):
     """
     Computes 1-vs-rest t-test for all clusters and genes.
 
@@ -131,7 +131,11 @@ def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True):
         labels_map[l] = i
     for i, l in enumerate(labels):
         labels_array[i] = labels_map[l]
-    scores, pvals = csc_unweighted_1_vs_rest_t_test(
+    if test == 't':
+        test_func = csc_unweighted_1_vs_rest_t_test
+    elif test == 'u':
+        test_func = csc_unweighted_1_vs_rest_rank_sum_test
+    scores, pvals = test_func(
             data_csc.data,
             data_csc.indices,
             data_csc.indptr,

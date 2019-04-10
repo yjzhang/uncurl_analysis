@@ -178,7 +178,10 @@ class SCAnalysisTest(TestCase):
         for i in values:
             gene_name = sca.gene_names[i]
             gene_info = sca.data_sampled_gene(gene_name)
-            self.assertTrue(np.abs(gene_info - self.data[i,:]).sum() < 0.01)
+            print(gene_info)
+            print(sca.data_sampled_all_genes[i, :])
+            print(self.data[i, :])
+            self.assertTrue(np.abs(gene_info - sca.data_sampled_all_genes[i,:]).sum() < 0.01)
             self.assertEqual(gene_info.shape[0], sca.data_sampled_all_genes.shape[1])
 
     def test_add_color_track(self):
