@@ -5,7 +5,7 @@ import pandas as pd
 
 import scipy.io
 
-from uncurl_analysis.gene_extraction import pairwise_t, c_scores_from_t
+from uncurl_analysis.gene_extraction import pairwise_t, c_scores_from_t, one_vs_rest_t
 
 
 # step 1: load data
@@ -27,6 +27,7 @@ import time
 t0 = time.time()
 #data_csc.data = data_csc.data**2
 scores, pvals = pairwise_t(data_csc, labels, eps=0.1)
+print('pairwise_t time: ', time.time() - t0)
 
 # TODO: calculate FDR
 from statsmodels.stats import multitest
@@ -47,6 +48,11 @@ actual_ratios = np.array(actual_ratios).flatten()
 # calculate p-values
 c_scores, c_pvals = c_scores_from_t(scores, pvals)
 print('c score time: ', time.time() - t0)
+
+# 1 vs rest u-test
+t0 = time.time()
+c_scores, c_pvals = one_vs_rest_t(data_csc, labels, eps=0.1, test='u')
+print('mann-whitney u-test time: ', time.time() - t0)
 
 # step 3: map gene ids to gene names
 new_pvals = {k:[] for k in c_pvals.keys()}
@@ -72,7 +78,7 @@ scde_genes = list(plist[0][1])
 deseq_genes = list(plist[1][8])
 cuffdiff2_genes = list(plist[2][0])
 
-top_cs_genes = [x[0] for x in new_pvals[1] if x[1]<=0.05]
+top_cs_genes = [x[0] for x in new_pvals[2] if x[1]<=0.05]
 
 
 cs_genes_intersection = len(set(top_cs_genes).intersection(top_1000_genes))
