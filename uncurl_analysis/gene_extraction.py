@@ -99,6 +99,8 @@ def pairwise_t(data, w_or_labels, eps=1.0, calc_pvals=True):
                 calc_pvals)
     else:
         labels_array = np.zeros(len(w_or_labels), dtype=int)
+        if cells != len(labels_array):
+            raise Exception('length of data not equal to length of labels')
         labels_map = {}
         for i, l in enumerate(sorted(list(set(w_or_labels)))):
             labels_map[l] = i
@@ -124,6 +126,8 @@ def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True, test='t'):
     """
     data_csc = sparse.csc_matrix(data)
     genes, cells = data.shape
+    if cells != len(labels):
+        raise Exception('length of data not equal to length of labels')
     labels_array = np.zeros(len(labels), dtype=int)
     # map from label names to indices
     labels_map = {}

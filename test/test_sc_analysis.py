@@ -142,7 +142,10 @@ class SCAnalysisTest(TestCase):
         self.assertTrue(sca.has_m)
         self.assertEqual(sca.cell_subset.shape[0], 400)
 
-    def test_split_cluster(self):
+    def test_split_delete_cluster(self):
+        """
+        Tests splitting clusters and deleting cells.
+        """
         sca = sc_analysis.SCAnalysis(self.data_dir,
                 frac=0.2,
                 clusters=8,
@@ -163,6 +166,14 @@ class SCAnalysisTest(TestCase):
         sca.run_post_analysis()
         self.assertEqual(sca.clusters, 9)
         self.assertEqual(sca.w_sampled.shape[0], 9)
+        old_cell_count = len(sca.cell_sample)
+        cells_to_remove = [0,1,2,3,4,5,6,7,8,9]
+        sca.recluster('delete', cells_to_remove)
+        sca.run_post_analysis()
+        self.assertEqual(sca.clusters, 9)
+        new_cell_count = len(sca.cell_sample)
+        self.assertEqual(new_cell_count, old_cell_count - len(cells_to_remove))
+
 
     def test_gene_names(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
@@ -181,10 +192,6 @@ class SCAnalysisTest(TestCase):
                 print('duplicate gene name')
                 continue
             gene_info = sca.data_sampled_gene(gene_name)
-            print('gene_index: ', i)
-            print('gene name: ', gene_name)
-            print('gene_info: ', gene_info)
-            print('sca.data_sampled_all_genes: ', sca.data_sampled_all_genes[i, :])
             self.assertTrue(np.abs(gene_info - sca.data_sampled_all_genes[i,:]).sum() < 0.01)
             self.assertEqual(gene_info.shape[0], sca.data_sampled_all_genes.shape[1])
 
@@ -248,6 +255,7 @@ class SCAnalysisTest(TestCase):
         sca.recluster('new', selected_cells)
         self.assertEqual(sca.clusters, 8)
         self.assertEqual(sca.w_sampled.shape[0], 8)
+
 
 if __name__ == '__main__':
     import unittest

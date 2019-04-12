@@ -451,7 +451,7 @@ class SCAnalysis(object):
         Cell sample (after applying data subset) - based on uniform
         simplex sampling on W.
         """
-        if self.cell_frac == 1:
+        if self._cell_sample is None and self.cell_frac == 1:
             self._cell_sample = np.arange(self.w.shape[1])
         else:
             if self._cell_sample is None:
@@ -1005,11 +1005,17 @@ class SCAnalysis(object):
             m_new, w_new = relabeling.new_cluster(data_sampled, m_new, w_new,
                     clusters_to_change, **self.uncurl_kwargs)
         elif split_or_merge == 'delete':
+            print('deleting cells')
             m_new, w_new, cells_to_include = relabeling.delete_cells(data_sampled, m_new, w_new,
                     clusters_to_change, **self.uncurl_kwargs)
             # remove cells from cell_sample
-            self.cell_sample = self.cell_sample[cells_to_include]
+            self._cell_sample = self.cell_sample[cells_to_include]
+            self.has_cell_sample = True
             np.savetxt(self.cell_sample_f, self.cell_sample, fmt='%d')
+            self._data_sampled_all_genes = None
+            self.has_data_sampled_all_genes = False
+            self.data_sampled_all_genes
+            self._baseline_vis = None
             self.has_baseline_vis = False
             self.baseline_vis
         # set w_sampled
@@ -1042,34 +1048,40 @@ class SCAnalysis(object):
 
         No need to change the baseline vis.
         """
+        print('running post analysis')
         self.has_labels = False
         self._labels = None
         self.labels
+        print('done with labels')
         #self.has_baseline_vis = False
         #self._baseline_vis = None
         #self.baseline_vis
         self.has_dim_red = False
         self._dim_red = None
         self.dim_red
+        print('done with dim_red')
         self.has_mds_means = False
         self._mds_means = None
         self.mds_means
-
+        print('done with mds_means')
         self.has_top_genes_1_vs_rest = False
         self._top_genes_1_vs_rest = None
         self.top_genes_1_vs_rest
-
+        print('done with top_genes_1_vs_rest')
         self.has_t_scores = False
         self._t_scores = None
         self.t_scores
+        print('done with t_scores')
         self.has_top_genes = False
         self._top_genes = None
         self.top_genes
+        print('done with top_genes')
         #self._pvals = None
         #self.pvals
         self.has_entropy = False
         self._entropy = None
         self.entropy
+        print('done with entropy')
         self.has_separation_scores = False
         self._separation_scores = None
         self.separation_scores
@@ -1120,13 +1132,12 @@ class SCAnalysis(object):
         if os.path.exists(self.json_f):
             with open(self.json_f) as f:
                 p = json.load(f)
-                self.__dict__ = p
-                #for key, val in p.items():
-                #    if key not in self.__dict__ or val != self.__dict__[key]:
-                #        # this is a terrible hack... basically don't overwrite the path existence checks
-                #        if key.startswith('has_') and val is False:
-                #            continue
-                #        self.__dict__[key] = val
+                p2 = p.copy()
+                # don't override True values with False values...
+                for key, val in p.items():
+                    if isinstance(key, str) and key.startswith('has_') and key in self.__dict__ and self.__dict__[key] is True:
+                        del p2[key]
+                self.__dict__.update(p2)
                 if 'profiling' not in p:
                     self.profiling = {}
         if os.path.exists(os.path.join(self.data_dir, 'params.json')):
