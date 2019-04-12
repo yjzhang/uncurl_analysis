@@ -9,8 +9,6 @@ import numpy as np
 import uncurl
 from uncurl import state_estimation
 
-from . import entropy
-
 def relabel(data, m_old, w_old, cell_ids, cell_labels, **uncurl_params):
     """
     Re-runs UNCURL on the dataset, after re-initializing W
@@ -97,6 +95,7 @@ def merge_clusters(data, m_old, w_old, clusters_to_merge,
 
     Returns: M_new, W_new
     """
+    # TODO: this doesn't work for merging more than 2 clusters
     k = m_old.shape[1] - len(clusters_to_merge) + 1
     m_init_new_col = np.zeros(m_old.shape[0])
     w_init_new_row = np.zeros(w_old.shape[1])
@@ -178,4 +177,15 @@ def delete_cluster(data, m_old, w_old, cluster_to_delete, **uncurl_params):
             init_weights=w_init,
             **uncurl_params)
     return m_new, w_new, cells_to_include
+
+def delete_cells(data, m_old, w_old, cells_to_delete, **uncurl_params):
+    """
+    given a list of cell ids, this removes the cells from w.
+    does not rerun uncurl.
+    """
+    cells = w_old.shape[1]
+    cells_to_delete = set(cells_to_delete)
+    cells_to_include = [x for x in range(cells) if x not in cells_to_delete]
+    w_new = w_old[:, cells_to_include]
+    return m_old, w_new, cells_to_include
 

@@ -942,7 +942,6 @@ class SCAnalysis(object):
         return scores, pvals
 
 
-
     def save_json_reset(self):
         """
         Removes all cached data, saves to json
@@ -982,6 +981,8 @@ class SCAnalysis(object):
             clusters_to_change=[]):
         """
         Runs split, merge, or new cluster. Updates m and w.
+
+        clusters_to_change can be a list of either cluster ids or cell ids.
         """
         data_sampled = self.data_sampled
         if 'init_means' in self.uncurl_kwargs:
@@ -1003,6 +1004,14 @@ class SCAnalysis(object):
             self.clusters = w_new.shape[0] + 1
             m_new, w_new = relabeling.new_cluster(data_sampled, m_new, w_new,
                     clusters_to_change, **self.uncurl_kwargs)
+        elif split_or_merge == 'delete':
+            m_new, w_new, cells_to_include = relabeling.delete_cells(data_sampled, m_new, w_new,
+                    clusters_to_change, **self.uncurl_kwargs)
+            # remove cells from cell_sample
+            self.cell_sample = self.cell_sample[cells_to_include]
+            np.savetxt(self.cell_sample_f, self.cell_sample, fmt='%d')
+            self.has_baseline_vis = False
+            self.baseline_vis
         # set w_sampled
         self._w_sampled = w_new
         np.savetxt(self.w_sampled_f, w_new)
