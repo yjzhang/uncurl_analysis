@@ -636,9 +636,11 @@ class SCAnalysis(object):
                 # this is due to a really bizarre up bug with json in python 3
                 labels = labels.tolist()
                 # TODO: have some option for eps?
+                # TODO: test could be 't' or 'u'???
                 self._top_genes_1_vs_rest, self._pvals_1_vs_rest = gene_extraction.one_vs_rest_t(
                         data, labels,
-                        eps=float(5*len(set(labels)))/data.shape[1])
+                        eps=float(5*len(set(labels)))/data.shape[1],
+                        test='u')
                 with open(self.top_genes_1_vs_rest_f, 'w') as f:
                     json.dump(self._top_genes_1_vs_rest, f,
                             cls=SimpleEncoder)
