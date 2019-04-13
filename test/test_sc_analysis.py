@@ -35,6 +35,8 @@ class SCAnalysisTest(TestCase):
         self.assertEqual(sca.clusters, 8)
         self.assertEqual(sca.data_dir, self.data_dir)
         self.assertEqual(sca.data_f, os.path.join(self.data_dir, 'data.mtx'))
+        # test read couns
+        self.assertTrue((sca.read_counts == self.data.sum(0)).all())
 
     def test_run_uncurl(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
@@ -52,6 +54,7 @@ class SCAnalysisTest(TestCase):
         self.assertTrue(os.path.exists(sca.m_f))
         print(nmi(sca.labels, self.labs))
         self.assertTrue(nmi(sca.labels, self.labs) > 0.65)
+
 
     def test_dim_red_sample(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,

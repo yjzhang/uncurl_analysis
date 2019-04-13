@@ -88,6 +88,10 @@ class SCAnalysis(object):
         self.has_data_sampled_all_genes = os.path.exists(self.data_sampled_all_genes_f)
         self._data_sampled_all_genes = None
 
+        self.read_counts_f = os.path.join(data_dir, 'read_counts.npy')
+        self.has_read_counts = os.path.exists(self.read_counts_f)
+        self._read_counts = None
+
         self.init_f = os.path.join(data_dir, 'init.txt')
         self.has_init = os.path.exists(self.init_f)
         self._init = None
@@ -265,6 +269,21 @@ class SCAnalysis(object):
                 gene_subset = np.loadtxt(self.gene_subset_f, dtype=int)
             self._gene_subset = gene_subset
         return self._gene_subset
+
+    @property
+    def read_counts(self):
+        """
+        Total read counts for each cell
+        """
+        # TODO
+        if self._read_counts is None:
+            if not self.has_read_counts:
+                self._read_counts = np.array(self.data.sum(0)).flatten()
+                np.save(self.read_counts_f, self._read_counts)
+                self.has_read_counts = True
+            else:
+                self._read_counts = np.load(self.read_counts_f)
+        return self._read_counts
 
     @property
     def cell_subset(self):
