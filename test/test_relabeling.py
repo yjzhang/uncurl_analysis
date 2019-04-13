@@ -55,27 +55,18 @@ class RelabelingTest(TestCase):
     def test_merge(self):
         # create distance matrix
         # find the min distance between two cluster pairs
-        distance_matrix = np.zeros((8,8))
-        min_distance_pair = (0,0)
-        min_distance = 1e10
         m = self.m
         w = self.w
         data_subset = self.data_subset
-        for i in range(8):
-            for j in range(8):
-                distance_matrix[i,j] = uncurl.sparse_utils.poisson_dist(m[:,i],
-                        m[:,j])
-                if i != j and distance_matrix[i,j] < min_distance:
-                    min_distance = distance_matrix[i,j]
-                    min_distance_pair = (i,j)
+        clusters_to_merge = [0,1,2]
         # merge the min distance pair
         m_merge, w_merge = relabeling.merge_clusters(data_subset, m, w,
-                min_distance_pair, max_iters=20, inner_max_iters=50)
+                clusters_to_merge, max_iters=20, inner_max_iters=50)
         nmi_base = nmi(self.labels, w.argmax(0))
         nmi_merge = nmi(self.labels, w_merge.argmax(0))
         print('nmi after merging the closest pairs: ' + str(nmi_merge))
-        self.assertTrue(nmi_merge >= nmi_base - 0.2)
-        self.assertEqual(w_merge.shape[0], w.shape[0] - 1)
+        self.assertTrue(nmi_merge >= nmi_base - 0.3)
+        self.assertEqual(w_merge.shape[0], w.shape[0] -2)
 
     def test_new(self):
         """

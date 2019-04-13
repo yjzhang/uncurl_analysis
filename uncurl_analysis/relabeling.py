@@ -54,8 +54,9 @@ def split_cluster(data, m_old, w_old, cluster_to_split, **uncurl_params):
     cell_subset = (labels==cluster_to_split)
     # or (sorted_labels[1,:]==cluster_to_split)
     data_subset = data[:,cell_subset]
+    mean_w = np.hstack([w_old[i,labels==i] for i in set(labels)]).mean()
     new_m, new_w = state_estimation.initialize_means_weights(data_subset, 2,
-            max_assign_weight=0.75)
+            max_assign_weight=mean_w)
     m_init = np.hstack([m_old[:, :cluster_to_split],
                        new_m,
                        m_old[:, cluster_to_split+1:]])
@@ -99,10 +100,10 @@ def merge_clusters(data, m_old, w_old, clusters_to_merge,
     k = m_old.shape[1] - len(clusters_to_merge) + 1
     m_init_new_col = np.zeros(m_old.shape[0])
     w_init_new_row = np.zeros(w_old.shape[1])
-    clusters_to_remove = np.array([True for i in range(k+1)])
-    clusters_to_remove[list(clusters_to_merge)] = False
-    m_init = m_old[:,clusters_to_remove]
-    w_init = w_old[clusters_to_remove,:]
+    clusters_to_keep = np.array([True for i in range(m_old.shape[1])])
+    clusters_to_keep[list(clusters_to_merge)] = False
+    m_init = m_old[:,clusters_to_keep]
+    w_init = w_old[clusters_to_keep,:]
     for c in clusters_to_merge:
         m_init_new_col += m_old[:,c]
         w_init_new_row += w_old[c,:]
@@ -138,6 +139,7 @@ def new_cluster(data, m_old, w_old, cells_to_add,
 
     Returns a new m and w.
     """
+    labels = w_old.argmax(0)
     k = m_old.shape[1] + 1
     genes = m_old.shape[0]
     cells = w_old.shape[1]
@@ -146,8 +148,9 @@ def new_cluster(data, m_old, w_old, cells_to_add,
     m_init[:, :k-1] = m_old
     w_init[:k-1, :] = w_old
     m_init[:, k-1] = data[:, cells_to_add].mean(1).A1
-    w_init[k-1, cells_to_add] = 0.9
-    w_init[:k-1, cells_to_add] = 0.1/(k-1)
+    mean_w = np.hstack([w_old[i,labels==i] for i in set(labels)]).mean()
+    w_init[k-1, cells_to_add] = mean_w
+    w_init[:k-1, cells_to_add] = (1 - mean_w)/(k-1)
     if rerun_uncurl:
         m_new, w_new, ll_new = uncurl.run_state_estimation(data,
                 clusters=k,
