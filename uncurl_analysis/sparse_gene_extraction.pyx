@@ -408,15 +408,12 @@ def csc_unweighted_1_vs_rest_rank_sum_test(np.ndarray[numeric, ndim=1] data,
     cdef double[:,:] rest_base_means
     cdef double[:,:] cluster_variances
     cdef double[:] cluster_cell_counts
-    cdef np.ndarray[double, ndim=1] log_data = np.log2(data + 1.0)
     labels_set = set(labels)
     cdef long K = len(labels_set)
-    cluster_means, rest_cluster_means, cluster_cell_counts = csc_1_vs_rest_cluster_means(
-            log_data, indices, indptr, labels, cells, genes)
     base_means, rest_base_means, cluster_cell_counts = csc_1_vs_rest_cluster_means(
             data, indices, indptr, labels, cells, genes)
     cluster_vals, rest_cluster_vals = csc_1_vs_rest_lists(
-            log_data, indices, indptr, labels, cells, genes)
+            data, indices, indptr, labels, cells, genes)
     cdef long g, k
     cdef double[:,:] ratios = np.zeros((K, genes))
     cdef double[:,:] pvals = np.zeros((K, genes))
