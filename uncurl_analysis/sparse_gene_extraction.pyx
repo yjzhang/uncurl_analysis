@@ -9,7 +9,6 @@ from scipy import sparse
 from scipy.special import xlogy, stdtr
 
 ctypedef fused int2:
-    short
     int
     long
     long long
@@ -92,7 +91,7 @@ def csc_unweighted_cluster_means(np.ndarray[numeric, ndim=1] data,
     labels_set = set(labels)
     cdef int2 K = len(labels_set)
     cdef double[:,:] cluster_means = np.zeros((genes, K))
-    cdef double[:] cluster_cell_counts = np.zeros(K)
+    cdef long[:] cluster_cell_counts = np.zeros(K).astype(np.int64)
     for c in range(cells):
         k = labels[c]
         cluster_cell_counts[k] += 1
@@ -129,7 +128,7 @@ def csc_1_vs_rest_cluster_means(np.ndarray[numeric, ndim=1] data,
     cdef int2 K = len(labels_set)
     cdef double[:,:] cluster_means = np.zeros((genes, K))
     cdef double[:,:] rest_cluster_means = np.zeros((genes, K))
-    cdef double[:] cluster_cell_counts = np.zeros(K)
+    cdef long[:] cluster_cell_counts = np.zeros(K).astype(int)
     for c in range(cells):
         k = labels[c]
         cluster_cell_counts[k] += 1
@@ -166,13 +165,15 @@ def csc_1_vs_rest_lists(np.ndarray[numeric, ndim=1] data,
     cdef int2[:] indices_ = indices
     cdef int2[:] indptr_ = indptr
     cdef int2 g, c, start_ind, end_ind, i2
-    cdef int k, k2
+    cdef int k, k2, remaining_length
     labels_set = set(labels)
     cdef int K = len(labels_set)
+    cdef long[:] cluster_cell_counts = np.zeros(K).astype(int)
     cluster_vals = [[[] for i in range(genes)] for k in range(K)]
     rest_cluster_vals = [[[] for i in range(genes)] for k in range(K)]
     for c in range(cells):
         k = labels[c]
+        cluster_cell_counts[k] += 1
         start_ind = indptr_[c]
         end_ind = indptr_[c+1]
         for i2 in range(start_ind, end_ind):
@@ -181,6 +182,7 @@ def csc_1_vs_rest_lists(np.ndarray[numeric, ndim=1] data,
             for k2 in range(K):
                 if k2 != k:
                     rest_cluster_vals[k2][g].append(data_[i2])
+
     return cluster_vals, rest_cluster_vals
 
 @cython.boundscheck(False)
@@ -337,7 +339,7 @@ def csc_unweighted_t_test(np.ndarray[numeric, ndim=1] data,
     #base_means is non-log
     cdef double[:,:] base_means
     cdef double[:,:] cluster_variances
-    cdef double[:] cluster_cell_counts
+    cdef long[:] cluster_cell_counts
     # log_data is log1p(data)
     cdef np.ndarray[double, ndim=1] log_data = np.log2(data + 1.0)
     cluster_means, cluster_cell_counts = csc_unweighted_cluster_means(
@@ -407,14 +409,14 @@ def csc_unweighted_1_vs_rest_rank_sum_test(np.ndarray[numeric, ndim=1] data,
     cdef double[:,:] base_means
     cdef double[:,:] rest_base_means
     cdef double[:,:] cluster_variances
-    cdef double[:] cluster_cell_counts
+    cdef long[:] cluster_cell_counts
     labels_set = set(labels)
     cdef long K = len(labels_set)
     base_means, rest_base_means, cluster_cell_counts = csc_1_vs_rest_cluster_means(
             data, indices, indptr, labels, cells, genes)
     cluster_vals, rest_cluster_vals = csc_1_vs_rest_lists(
             data, indices, indptr, labels, cells, genes)
-    cdef long g, k
+    cdef long g, k, remaining_length_cluster, remaining_length_rest
     cdef double[:,:] ratios = np.zeros((K, genes))
     cdef double[:,:] pvals = np.zeros((K, genes))
     # the rank-sum test requires a list of values for gene g and cluster k,
@@ -426,7 +428,11 @@ def csc_unweighted_1_vs_rest_rank_sum_test(np.ndarray[numeric, ndim=1] data,
             ratios[k, g] = (base_means[g, k] + eps)/(rest_base_means[g, k] + eps)
             if ratios[k, g] > 1.0:
                 try:
-                    stat, pval = mannwhitneyu(cluster_genes[g], rest_genes[g], alternative='greater')
+                    # TODO: ZERO VALUES have to be included
+                    remaining_length_cluster = cluster_cell_counts[k] - len(cluster_genes[g])
+                    remaining_length_rest = cells - cluster_cell_counts[k] - len(rest_genes[g])
+                    stat, pval = mannwhitneyu(cluster_genes[g] + [0]*remaining_length_cluster,
+                            rest_genes[g] + [0]*remaining_length_rest, alternative='greater')
                 except:
                     pval = 0.99
                 pvals[k, g] = pval
@@ -473,7 +479,7 @@ def csc_unweighted_1_vs_rest_t_test(np.ndarray[numeric, ndim=1] data,
     cdef double[:,:] base_means
     cdef double[:,:] rest_base_means
     cdef double[:,:] cluster_variances
-    cdef double[:] cluster_cell_counts
+    cdef long[:] cluster_cell_counts
     cdef np.ndarray[double, ndim=1] log_data = np.log2(data + 1.0)
     cluster_means, rest_cluster_means, cluster_cell_counts = csc_1_vs_rest_cluster_means(
             log_data, indices, indptr, labels, cells, genes)

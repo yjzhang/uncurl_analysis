@@ -275,7 +275,6 @@ class SCAnalysis(object):
         """
         Total read counts for each cell
         """
-        # TODO
         if self._read_counts is None:
             if not self.has_read_counts:
                 self._read_counts = np.array(self.data.sum(0)).flatten()
