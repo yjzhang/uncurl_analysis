@@ -30,7 +30,7 @@ install_requires = [
 
 setup(
     name='uncurl-analysis',
-    version='0.1.1',
+    version='0.2.0',
     author='Yue Zhang',
     author_email='yjzhang@cs.washington.edu',
     url='https://github.com/yjzhang/uncurl_analysis',
