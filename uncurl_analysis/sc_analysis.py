@@ -8,7 +8,7 @@ from scipy import sparse
 import uncurl
 from uncurl.sparse_utils import symmetric_kld
 
-from . import gene_extraction, relabeling, sparse_matrix_h5, dense_matrix_h5
+from . import gene_extraction, relabeling, sparse_matrix_h5, dense_matrix_h5, custom_cell_selection
 from .entropy import entropy
 
 from sklearn.decomposition import PCA, TruncatedSVD
@@ -204,8 +204,10 @@ class SCAnalysis(object):
 
         self._color_tracks_cache = {}
 
-        # dict of color map to differential expression results
-        self.color_track_diffexp = None
+        # custom cell selections
+        self.custom_selections_f = os.path.join(data_dir, 'custom_selections.json')
+        self._custom_selections = None
+
 
         # dict of output_name : running time
         self.profiling = {}
@@ -843,31 +845,38 @@ class SCAnalysis(object):
             json.dump(self.color_tracks, f,
                     cls=SimpleEncoder)
 
-    def create_custom_color_track(self, color_track_name):
+    @property
+    def custom_selections(self):
         """
-        Create a new custom discrete color track with the given name.
+        A dict of name : CustomColorMap object
         """
-        # TODO
-        keep_chars = set(['-', '_', ' '])
-        color_track_name = ''.join([c for c in color_track_name if c.isalnum() or (c in keep_chars)])
-        color_track_filename = 'color_track_' + color_track_name[:50] + '.npy'
-        color_track_filename = os.path.join(self.data_dir, color_track_filename)
-        # create new data vector with shape self.cell_sample 
-        color_data = np.repeat(['default'], len(self.cell_sample))
-        np.save(color_track_filename, color_data, fmt='%s')
-        self.color_tracks[color_track_name] = {'is_discrete': True, 'color_track_filename': color_track_filename}
-        with open(self.color_tracks_f, 'w') as f:
-            json.dump(self.color_tracks, f,
-                    cls=SimpleEncoder)
+        if self._custom_selections is None:
+            if os.path.exists(self.custom_selections_f):
+                self._custom_selections = custom_cell_selection.load_json(self.custom_selections_f)
+            else:
+                self._custom_selections = {}
+        return self._custom_selections
+
+
+    def create_custom_selection(self, color_track_name, labels=None):
+        """
+        Create a new custom discrete color map with the given name.
+
+        Args:
+            color_track_name (str)
+            labels (list): list of labels
+        """
+        # TODO: deal with criteria?
+        self._custom_selections[color_track_name] = custom_cell_selection.CustomColorMap()
+        self._custom_selections[color_track_name].labels = labels
+        custom_cell_selection.save_json(self.custom_selections_f, self._custom_selections)
+
 
     def update_custom_color_track(self, color_track_name, new_color_track_data):
         """
         Re-writes the color track info with the new color track info...
         """
-        if hasattr(self, '_color_tracks_cache'):
-            self._color_tracks_cache[color_track_name] = new_color_track_data
-        is_discrete, color_track_filename = self.color_tracks[color_track_name]
-        np.save(color_track_filename, new_color_track_data, fmt='%s')
+        # TODO
 
     def get_color_track(self, color_track_name):
         """
