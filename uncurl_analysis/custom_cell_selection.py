@@ -46,7 +46,6 @@ class LabelCriterion(object):
             color_track, is_discrete = sca.get_color_track(self.selection_type)
             return np.where(color_track == str(self.target))[0]
 
-
 class CustomLabel(object):
     """
     this class represents a single label
@@ -96,7 +95,7 @@ class CustomColorMap(object):
             self.labels = labels
 
     def labels(self, sca):
-        cell_labels = np.array(['0' for x in range(len(sca.cell_sample))])
+        cell_labels = np.array(['default' for x in range(len(sca.cell_sample))])
         for label in self.labels:
             indices = label.select_cells(sca)
             cell_labels[indices] = label.name
@@ -137,3 +136,10 @@ def save_json(json_filename, data):
     with open(json_filename, 'w') as f:
         json.dump(data, f, default=json_default)
 
+def create_json(data):
+    """
+    Creates a str representation as a json
+    """
+    def json_default(x):
+        return x.__dict__
+    return json.dumps(data, default=json_default)

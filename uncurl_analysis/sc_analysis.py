@@ -867,16 +867,28 @@ class SCAnalysis(object):
             labels (list): list of labels
         """
         # TODO: deal with criteria?
-        self._custom_selections[color_track_name] = custom_cell_selection.CustomColorMap()
-        self._custom_selections[color_track_name].labels = labels
-        custom_cell_selection.save_json(self.custom_selections_f, self._custom_selections)
+        if color_track_name in self.get_color_track_names():
+            raise Exception('color track name already in use.')
+        self.custom_selections[color_track_name] = custom_cell_selection.CustomColorMap()
+        if labels is not None:
+            self.custom_selections[color_track_name].labels = labels
+        custom_cell_selection.save_json(self.custom_selections_f, self.custom_selections)
 
-
-    def update_custom_color_track(self, color_track_name, new_color_track_data):
+    def update_custom_color_track_label(self, color_track_name, label_name, label_criteria=None):
         """
         Re-writes the color track info with the new color track info...
         """
         # TODO
+        color_track = self.custom_selections[color_track_name]
+        has_updated_label = False
+        for label in color_track.labels:
+            if label.name == label_name:
+                has_updated_label = True
+                label.criteria = label_criteria
+        if not has_updated_label:
+            new_label = custom_cell_selection.CustomLabel(label_name, label_criteria)
+            color_track.labels.append(new_label)
+        custom_cell_selection.save_json(self.custom_selections_f, self._custom_selections)
 
     def get_color_track(self, color_track_name):
         """
@@ -905,6 +917,9 @@ class SCAnalysis(object):
                 data = data[self.cell_subset][self.cell_sample]
             self._color_tracks_cache[color_track_name] = (data, is_discrete)
             return data, is_discrete
+        elif color_track_name in self.custom_selections:
+            colormap = self.custom_selections[color_track_name]
+            return colormap.labels(self), True
         else:
             return None
 
@@ -913,7 +928,21 @@ class SCAnalysis(object):
         Returns all color track names
         """
         print(self.color_tracks)
-        return list(self.color_tracks.keys())
+        print(self.custom_selections)
+        return list(self.color_tracks.keys()) + list(self.custom_selections.keys())
+
+    def get_color_track_values(self, color_track_name):
+        """
+        Returns a set of values for a color track.
+        """
+        if color_track_name not in self.color_tracks:
+            return None
+        else:
+            color_track, is_discrete = self.get_color_track(color_track_name)
+            if is_discrete:
+                return set(color_track)
+            else:
+                return  None
 
     def calculate_diffexp(self, color_track_name, mode='1_vs_rest', calc_pvals=True, eps=None):
         """
