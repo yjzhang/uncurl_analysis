@@ -15,6 +15,7 @@ class LabelCriterion(object):
             selection_type (str): 'cluster', 'gene', 'read_counts', or some custom label
             comparison (str): '=', '!=', '>=', '<='
             target (str or number): a representation of the target...
+            and_or (str): 'and' or 'or'. If 'and': the label MUST include the criterion. If 'or': the label can possibly include the criterion.
         """
         self.selection_type = selection_type
         self.comparison = comparison
@@ -45,7 +46,10 @@ class LabelCriterion(object):
             pass
         else:
             color_track, is_discrete = sca.get_color_track(self.selection_type)
-            return np.where(color_track == str(self.target))[0]
+            if self.comparison == '=':
+                return np.where(color_track == str(self.target))[0]
+            elif self.comparison == '!=':
+                return np.where(color_track != str(self.target))[0]
 
 class CustomLabel(object):
     """
@@ -69,6 +73,7 @@ class CustomLabel(object):
         Selects cells corresponding to the given label
         """
         all_indices = set()
+        self.criteria.sort(key=lambda x: x.and_or, reverse=True)
         for c in self.criteria:
             indices = c.select(sca)
             m = c.and_or
@@ -105,7 +110,6 @@ class CustomColorMap(object):
             indices = label.select_cells(sca)
             if len(indices) == 0:
                 continue
-            print(indices)
             cell_labels[indices] = label.name
         return cell_labels
 

@@ -903,7 +903,10 @@ class SCAnalysis(object):
             return data, is_discrete
         except:
             pass
-        if color_track_name in self.color_tracks:
+        if color_track_name in self.custom_selections:
+            colormap = self.custom_selections[color_track_name]
+            return colormap.label_cells(self), True
+        elif color_track_name in self.color_tracks:
             if not isinstance(self.color_tracks[color_track_name], dict):
                 is_discrete, filename = self.color_tracks[color_track_name]
             else:
@@ -918,9 +921,6 @@ class SCAnalysis(object):
                 data = data[self.cell_subset][self.cell_sample]
             self._color_tracks_cache[color_track_name] = (data, is_discrete)
             return data, is_discrete
-        elif color_track_name in self.custom_selections:
-            colormap = self.custom_selections[color_track_name]
-            return colormap.label_cells(self), True
         else:
             return None
 
@@ -954,6 +954,8 @@ class SCAnalysis(object):
         color_track, is_discrete = self.get_color_track(color_track_name)
         if not is_discrete:
             return None
+        if color_track_name not in self.color_tracks:
+            self.color_tracks[color_track_name] = {}
         results = self.color_tracks[color_track_name]
         if mode + '_scores' in results and mode + '_pvals' in results:
             scores_filename = results[mode + '_scores']

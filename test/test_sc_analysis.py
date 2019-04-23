@@ -3,7 +3,6 @@ import os
 from unittest import TestCase
 import shutil
 
-import uncurl
 from uncurl_analysis import sc_analysis
 
 from scipy import sparse
