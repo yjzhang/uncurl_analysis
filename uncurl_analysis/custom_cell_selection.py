@@ -9,7 +9,7 @@ class LabelCriterion(object):
     This class represents a custom criterion for selecting a subset of cells.
     """
 
-    def __init__(self, selection_type=None, comparison=None, target=None, value=None):
+    def __init__(self, selection_type=None, comparison=None, target=None, value=None, and_or='and'):
         """
         Args:
             selection_type (str): 'cluster', 'gene', 'read_counts', or some custom label
@@ -20,6 +20,7 @@ class LabelCriterion(object):
         self.comparison = comparison
         self.target = target
         self.value = value
+        self.and_or = and_or
 
     def select(self, sca):
         """
@@ -55,7 +56,7 @@ class CustomLabel(object):
         """
         Args:
             name (str)
-            criteria: list of (str, LabelCriterion) tuples, where str is either 'and' or 'or'
+            criteria: list of LabelCriterion objects
         """
         self.name = name
         if criteria is None:
@@ -68,8 +69,9 @@ class CustomLabel(object):
         Selects cells corresponding to the given label
         """
         all_indices = set()
-        for m, c in self.criteria:
+        for c in self.criteria:
             indices = c.select(sca)
+            m = c.and_or
             if m == 'and' and len(all_indices) > 0:
                 all_indices.intersection_update(indices)
             else:
@@ -94,10 +96,16 @@ class CustomColorMap(object):
         else:
             self.labels = labels
 
-    def labels(self, sca):
+    def label_cells(self, sca):
+        """
+        Labels the cells in the given SCAnalysis object.
+        """
         cell_labels = np.array(['default' for x in range(len(sca.cell_sample))])
         for label in self.labels:
             indices = label.select_cells(sca)
+            if len(indices) == 0:
+                continue
+            print(indices)
             cell_labels[indices] = label.name
         return cell_labels
 
@@ -109,7 +117,7 @@ def load_json(json_filename):
     with open(json_filename) as f:
         data = json.load(f)
     output = {}
-    for key, val in data:
+    for key, val in data.items():
         cm = CustomColorMap('')
         cm.__dict__ = val
         labels_list = []

@@ -869,7 +869,7 @@ class SCAnalysis(object):
         # TODO: deal with criteria?
         if color_track_name in self.get_color_track_names():
             raise Exception('color track name already in use.')
-        self.custom_selections[color_track_name] = custom_cell_selection.CustomColorMap()
+        self.custom_selections[color_track_name] = custom_cell_selection.CustomColorMap(color_track_name)
         if labels is not None:
             self.custom_selections[color_track_name].labels = labels
         custom_cell_selection.save_json(self.custom_selections_f, self.custom_selections)
@@ -884,7 +884,8 @@ class SCAnalysis(object):
         for label in color_track.labels:
             if label.name == label_name:
                 has_updated_label = True
-                label.criteria = label_criteria
+                if label_criteria is not None:
+                    label.criteria = label_criteria
         if not has_updated_label:
             new_label = custom_cell_selection.CustomLabel(label_name, label_criteria)
             color_track.labels.append(new_label)
@@ -919,7 +920,7 @@ class SCAnalysis(object):
             return data, is_discrete
         elif color_track_name in self.custom_selections:
             colormap = self.custom_selections[color_track_name]
-            return colormap.labels(self), True
+            return colormap.label_cells(self), True
         else:
             return None
 
