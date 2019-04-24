@@ -878,7 +878,6 @@ class SCAnalysis(object):
         """
         Re-writes the color track info with the new color track info...
         """
-        # TODO
         color_track = self.custom_selections[color_track_name]
         has_updated_label = False
         for label in color_track.labels:
@@ -886,6 +885,9 @@ class SCAnalysis(object):
                 has_updated_label = True
                 if label_criteria is not None:
                     label.criteria = label_criteria
+        # this is kind of a hack...
+        if has_updated_label and label_criteria is None:
+            return
         if not has_updated_label:
             new_label = custom_cell_selection.CustomLabel(label_name, label_criteria)
             color_track.labels.append(new_label)
@@ -939,7 +941,7 @@ class SCAnalysis(object):
         """
         color_tracks_1 = set(self.color_tracks.keys())
         custom_selections = set(self.custom_selections.keys())
-        # TODO: filter
+        # filter
         color_tracks_1.update(custom_selections)
         return list(color_tracks_1)
 

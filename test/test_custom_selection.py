@@ -91,6 +91,14 @@ class CustomSelectionTest(unittest.TestCase):
         print(scores.shape)
         self.assertTrue(scores.shape == (3, 3, self.sca.data.shape[0]))
         print(pvals.shape)
+        # update color map criteria
+        c8 = custom_cell_selection.LabelCriterion(selection_type='true_labels', comparison='=', target='8', and_or='or')
+        c9 = custom_cell_selection.LabelCriterion(selection_type='true_labels', comparison='=', target='9', and_or='or')
+        self.sca.update_custom_color_track_label('cmap1', 'label2', [c5, c8, c9])
+        data, is_discrete = self.sca.get_color_track('cmap1')
+        self.assertTrue((data=='label1').sum()==150)
+        self.assertTrue((data=='label2').sum()==150)
+        self.assertTrue(((self.labels[data=='label2'] == 4) | (self.labels[data=='label2'] == 8) | (self.labels[data=='label2'] == 9)).all())
 
 
 if __name__ == '__main__':
