@@ -889,6 +889,15 @@ class SCAnalysis(object):
         if not has_updated_label:
             new_label = custom_cell_selection.CustomLabel(label_name, label_criteria)
             color_track.labels.append(new_label)
+        if color_track_name in self.color_tracks:
+            results = self.color_tracks[color_track_name]
+            # delete all temp files
+            for k, v in results.items():
+                os.remove(v)
+            del self.color_tracks[color_track_name]
+            with open(self.color_tracks_f, 'w') as f:
+                json.dump(self.color_tracks, f,
+                        cls=SimpleEncoder)
         custom_cell_selection.save_json(self.custom_selections_f, self._custom_selections)
 
     def get_color_track(self, color_track_name):
@@ -928,9 +937,11 @@ class SCAnalysis(object):
         """
         Returns all color track names
         """
-        print(self.color_tracks)
-        print(self.custom_selections)
-        return list(self.color_tracks.keys()) + list(self.custom_selections.keys())
+        color_tracks_1 = set(self.color_tracks.keys())
+        custom_selections = set(self.custom_selections.keys())
+        # TODO: filter
+        color_tracks_1.update(custom_selections)
+        return list(color_tracks_1)
 
     def get_color_track_values(self, color_track_name):
         """

@@ -9,7 +9,7 @@ class LabelCriterion(object):
     This class represents a custom criterion for selecting a subset of cells.
     """
 
-    def __init__(self, selection_type=None, comparison=None, target=None, value=None, and_or='and'):
+    def __init__(self, selection_type=None, comparison=None, target=None, and_or='and', value=None):
         """
         Args:
             selection_type (str): 'cluster', 'gene', 'read_counts', or some custom label
