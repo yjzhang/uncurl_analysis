@@ -42,6 +42,11 @@ class CustomSelectionTest(unittest.TestCase):
         results = criterion_1.select(self.sca)
         self.assertTrue((self.sca.labels[results] == 0).all())
 
+        criterion_1 = custom_cell_selection.LabelCriterion(selection_type='selection', comparison='=', target=[0,1,2,3])
+        results = criterion_1.select(self.sca)
+        self.assertTrue(len(results)==4)
+
+
     def test_custom_label(self):
         c1 = custom_cell_selection.LabelCriterion(selection_type='true_labels', comparison='=', target='0', and_or='or')
         c2 = custom_cell_selection.LabelCriterion(selection_type='true_labels', comparison='=', target='1', and_or='or')

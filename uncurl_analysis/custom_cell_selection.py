@@ -44,6 +44,8 @@ class LabelCriterion(object):
                 return np.where(gene_values <= float(self.target))[0]
         elif self.selection_type == 'read_counts':
             pass
+        elif self.selection_type == 'selection':
+            return np.array(list(self.target)).astype(int)
         else:
             color_track, is_discrete = sca.get_color_track(self.selection_type)
             if self.comparison == '=':
