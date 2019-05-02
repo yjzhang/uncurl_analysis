@@ -82,6 +82,11 @@ class H5Dict(object):
         f.close()
         return keys
 
+    def items(self):
+        """Returns an iterator over all key-item pairs"""
+        for key in self.keys():
+            yield key, self.__getitem__(key)
+
 def store_array(h5_filename, data):
     """
     Writes a numpy array to an h5 file
