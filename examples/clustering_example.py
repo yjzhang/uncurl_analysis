@@ -23,10 +23,14 @@ m, w, ll = uncurl.run_state_estimation(data_subset, 8)
 print('nmi basic: ' + str(nmi(labels, w.argmax(0))))
 
 # 4. run clustering???
-w_graph = clustering_methods.create_graph(w.T, n_neighbors=15, metric='cosine')
+w_graph = clustering_methods.create_graph(w.T, n_neighbors=20, metric='cosine')
 clusters = clustering_methods.run_leiden(w_graph)
 print('nmi leiden: ' + str(nmi(labels, clusters)))
+clusters_louvain = clustering_methods.run_louvain(w_graph)
+print('nmi leiden: ' + str(nmi(labels, clusters_louvain)))
 # results with n_neighbors=15: nmi=0.7986665570975124 for cosine, 0.7240768039054569 for euclidean 
 
 # 5. try running clustering w/o uncurl
-
+clustering_result = clustering_methods.baseline_cluster(data_subset)
+# TODO: figure out cuts
+print('nmi leiden baseline: ' + str(nmi(labels, clustering_result.membership)))

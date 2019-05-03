@@ -36,18 +36,27 @@ def run_leiden(g, **params):
     """
     import leidenalg
     part = leidenalg.find_partition(g, leidenalg.ModularityVertexPartition)
-    print(part)
     return part.membership
 
 def run_louvain(g, **params):
     """
     runs the leiden partitioning algorithm on a given graph.
     """
-    part = g.community_multilevel(weights='weight')
+    g = g.simplify()
+    part = g.community_multilevel()
     return part.membership
 
 def baseline_cluster(data, **params):
     """
+    Runs clustering on raw single-cell data.
     Args:
+        data (array of shape (genes, cells))
     """
     # TODO: combine dim-red + clustering
+    from uncurl.preprocessing import log1p
+    import leidenalg
+    tsvd = TruncatedSVD(20)
+    data_transformed = tsvd.fit_transform(log1p(data).T)
+    graph = create_graph(data_transformed, **params)
+    part = leidenalg.find_partition(graph, leidenalg.ModularityVertexPartition)
+    return part
