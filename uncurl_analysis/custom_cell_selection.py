@@ -45,6 +45,8 @@ class LabelCriterion(object):
         elif self.selection_type == 'read_counts':
             pass
         elif self.selection_type == 'selection':
+            if isinstance(self.target, str) and ',' in self.target:
+                self.target = [int(x) for x in self.target.split(',')]
             return np.array(list(self.target)).astype(int)
         else:
             color_track, is_discrete = sca.get_color_track(self.selection_type)
