@@ -25,7 +25,9 @@ install_requires = [
         'requests',
         'umap-learn',
         'tables',
-        'pandas'
+        'pandas',
+        'python-igraph',
+        'leidenalg'
 ]
 
 setup(
