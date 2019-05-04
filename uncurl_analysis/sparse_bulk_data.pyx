@@ -15,9 +15,7 @@ ctypedef fused int2:
 
 ctypedef fused numeric:
     short
-    unsigned short
     int
-    unsigned int
     long
     float
     double
@@ -49,7 +47,6 @@ def csc_log_prob_poisson_no_norm(np.ndarray[numeric, ndim=1] data,
 @cython.wraparound(False)
 @cython.nonecheck(False)
 def log_prob_poisson_no_norm(np.ndarray[numeric, ndim=1] data,
-        # bulk data
         np.ndarray[double, ndim=1] bulk_data,
         double eps=1e-10):
     """

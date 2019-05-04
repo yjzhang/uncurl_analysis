@@ -51,12 +51,14 @@ def baseline_cluster(data, **params):
     Runs clustering on raw single-cell data.
     Args:
         data (array of shape (genes, cells))
+        n_neighbors (int)
+        metric (str): 'euclidean', 'cosine', etc.
     """
-    # TODO: combine dim-red + clustering
+    # combine dim-red + clustering
     from uncurl.preprocessing import log1p
     import leidenalg
     tsvd = TruncatedSVD(20)
     data_transformed = tsvd.fit_transform(log1p(data).T)
     graph = create_graph(data_transformed, **params)
     part = leidenalg.find_partition(graph, leidenalg.ModularityVertexPartition)
-    return part
+    return part.membership

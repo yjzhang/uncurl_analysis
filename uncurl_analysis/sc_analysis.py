@@ -18,6 +18,8 @@ import simplex_sample
 
 DIM_RED_OPTIONS = ['MDS', 'tSNE', 'TSVD', 'PCA', 'UMAP']
 
+CLUSTERING_METHODS = ['argmax', 'louvain', 'leiden', 'leiden_baseline']
+
 class SimpleEncoder(json.JSONEncoder):
 
     def default(self, o):
@@ -49,7 +51,7 @@ class SCAnalysis(object):
             cell_frac=1.0,
             dim_red_option='mds',
             baseline_dim_red='none',
-            pval_n_perms=50,
+            clustering_method='argmax',
             **uncurl_kwargs):
         """
         Args:
@@ -118,6 +120,7 @@ class SCAnalysis(object):
         self.has_w_sampled = os.path.exists(self.w_sampled_f)
         self._w_sampled = None
 
+        self.clustering_method = clustering_method
         self.labels_f = os.path.join(data_dir, 'labels.txt')
         self.has_labels = os.path.exists(self.labels_f)
         self._labels = None
@@ -168,7 +171,6 @@ class SCAnalysis(object):
         self.has_top_genes = os.path.exists(self.top_genes_f)
         self._top_genes = None
 
-        self.pval_n_perms = pval_n_perms
         self.pvals_f = os.path.join(data_dir, 'gene_pvals.txt')
         self.has_pvals = os.path.exists(self.pvals_f)
         self._pvals = None
