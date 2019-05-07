@@ -123,6 +123,10 @@ def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True, test='t'):
     Computes 1-vs-rest t-test for all clusters and genes.
 
     If calc_pvals is False, the pvals will be all 0.
+
+    test is either 't' or 'u'.
+    't' indicates that the 2-sample t-test will be used,
+    and 'u' is the Mann-Whitney U test.
     """
     data_csc = sparse.csc_matrix(data)
     genes, cells = data.shape

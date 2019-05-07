@@ -31,7 +31,7 @@ class SCAnalysisTest(TestCase):
         sca = sc_analysis.SCAnalysis(self.data_dir,
                 clusters=8,
                 data_filename='data.mtx')
-        self.assertEqual(sca.clusters, 8)
+        self.assertEqual(sca.params['clusters'], 8)
         self.assertEqual(sca.data_dir, self.data_dir)
         self.assertEqual(sca.data_f, os.path.join(self.data_dir, 'data.mtx'))
         # test read couns
@@ -135,9 +135,14 @@ class SCAnalysisTest(TestCase):
                 inner_max_iters=20)
         sca.run_full_analysis()
         sca.save_json_reset()
+        # delete the whole sca, re-load it from json
+        del sca
+        sca = sc_analysis.SCAnalysis(self.data_dir)
         sca = sca.load_params_from_folder()
-        self.assertEqual(sca.clusters, 8)
-        self.assertEqual(sca.baseline_dim_red, 'tsvd')
+        self.assertEqual(sca.params['clusters'], 8)
+        self.assertEqual(sca.params['baseline_dim_red'], 'tsvd')
+        self.assertEqual(sca.params['cell_frac'], 0.5)
+        self.assertEqual(sca.params['genes_frac'], 0.2)
         self.assertEqual(sca.uncurl_kwargs['max_iters'], 20)
         self.assertTrue(sca.has_dim_red)
         self.assertTrue(sca.has_w)
@@ -166,13 +171,13 @@ class SCAnalysisTest(TestCase):
         print(top_cluster, top_count)
         sca.recluster('split', [top_cluster])
         sca.run_post_analysis()
-        self.assertEqual(sca.clusters, 9)
+        self.assertEqual(sca.params['clusters'], 9)
         self.assertEqual(sca.w_sampled.shape[0], 9)
         old_cell_count = len(sca.cell_sample)
         cells_to_remove = [0,1,2,3,4,5,6,7,8,9]
         sca.recluster('delete', cells_to_remove)
         sca.run_post_analysis()
-        self.assertEqual(sca.clusters, 9)
+        self.assertEqual(sca.params['clusters'], 9)
         new_cell_count = len(sca.cell_sample)
         self.assertEqual(new_cell_count, old_cell_count - len(cells_to_remove))
 
@@ -250,12 +255,12 @@ class SCAnalysisTest(TestCase):
         cluster_counts = Counter(clusters)
         top_cluster, top_count = cluster_counts.most_common()[0]
         sca.run_post_analysis()
-        self.assertEqual(sca.clusters, 7)
+        self.assertEqual(sca.params['clusters'], 7)
         self.assertEqual(sca.w_sampled.shape[0], 7)
         # TODO: due to sampling, this won't actually be the cluster 7 cells...
         selected_cells = list(range(350, sca.w_sampled.shape[1]))
         sca.recluster('new', selected_cells)
-        self.assertEqual(sca.clusters, 8)
+        self.assertEqual(sca.params['clusters'], 8)
         self.assertEqual(sca.w_sampled.shape[0], 8)
 
 

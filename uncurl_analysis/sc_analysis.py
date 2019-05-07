@@ -16,7 +16,7 @@ from sklearn.manifold import TSNE, MDS
 
 import simplex_sample
 
-DIM_RED_OPTIONS = ['MDS', 'tSNE', 'TSVD', 'PCA', 'UMAP']
+DIM_RED_OPTIONS = ['mds', 'tsne', 'tsvd', 'pca', 'umap']
 
 CLUSTERING_METHODS = ['argmax', 'louvain', 'leiden', 'leiden_baseline']
 
@@ -52,6 +52,7 @@ class SCAnalysis(object):
             dim_red_option='mds',
             baseline_dim_red='none',
             clustering_method='argmax',
+            one_vs_all_test='t',
             **uncurl_kwargs):
         """
         Args:
@@ -60,11 +61,22 @@ class SCAnalysis(object):
         # note: each field contains file names, and whether or not
         # the analysis is complete.
         self.data_dir = data_dir
-        self.clusters = clusters
-        self.min_reads = min_reads
-        self.max_reads = max_reads
-        self.normalize = normalize
-        self.is_sparse = data_is_sparse
+        # TODO: params is a dict of parameters...
+        self.params = {}
+        self.params['clusters'] = clusters
+        self.params['min_reads'] = min_reads
+        self.params['max_reads'] = max_reads
+        self.params['normalize'] = normalize
+        self.params['is_sparse'] = data_is_sparse
+        self.params['genes_frac'] = frac
+        self.params['cell_frac'] = cell_frac
+        self.params['baseline_dim_red'] = baseline_dim_red.lower()
+        self.params['dim_red_option'] = dim_red_option.lower()
+        self.params['clustering_method'] = clustering_method.lower()
+        self.params['one_vs_all_test'] = one_vs_all_test
+
+        self.uncurl_kwargs = uncurl_kwargs
+
         self.data_f = os.path.join(data_dir, data_filename)
         self._data = None
         self._data_subset = None
@@ -105,12 +117,10 @@ class SCAnalysis(object):
                 self.gene_names_f = gf1
         self._gene_names = None
 
-        self.frac = frac
         self.gene_subset_f = os.path.join(data_dir, 'gene_subset.txt')
         self.has_gene_subset = os.path.exists(self.gene_subset_f)
         self._gene_subset = None
 
-        self.uncurl_kwargs = uncurl_kwargs
 
         self.w_f = os.path.join(data_dir, 'w.txt')
         self.has_w = os.path.exists(self.w_f)
@@ -120,7 +130,6 @@ class SCAnalysis(object):
         self.has_w_sampled = os.path.exists(self.w_sampled_f)
         self._w_sampled = None
 
-        self.clustering_method = clustering_method
         self.labels_f = os.path.join(data_dir, 'labels.txt')
         self.has_labels = os.path.exists(self.labels_f)
         self._labels = None
@@ -148,17 +157,14 @@ class SCAnalysis(object):
         self.has_cell_subset = os.path.exists(self.cell_subset_f)
         self._cell_subset = None
 
-        self.cell_frac = cell_frac
         self.cell_sample_f = os.path.join(data_dir, 'cell_sample.txt')
         self.has_cell_sample = os.path.exists(self.cell_sample_f)
         self._cell_sample = None
 
-        self.baseline_dim_red = baseline_dim_red.lower()
         self.baseline_vis_f = os.path.join(data_dir, 'baseline_vis.txt')
         self.has_baseline_vis = os.path.exists(self.baseline_vis_f)
         self._baseline_vis = None
 
-        self.dim_red_option = dim_red_option.lower()
         self.dim_red_f = os.path.join(data_dir, 'mds_data.txt')
         self.has_dim_red = os.path.exists(self.dim_red_f)
         self._dim_red = None
@@ -228,7 +234,7 @@ class SCAnalysis(object):
             self.data_f = str(self.data_f)
             print('loading data:', self.data_f)
             try:
-                if self.is_sparse:
+                if self.params['is_sparse']:
                     self._data = scipy.io.mmread(self.data_f)
                     self._data = sparse.csc_matrix(self._data)
                 else:
@@ -264,7 +270,7 @@ class SCAnalysis(object):
                 t = time.time()
                 data = self.data_normalized[:, self.cell_subset]
                 gene_subset = uncurl.max_variance_genes(data, nbins=5,
-                        frac=self.frac)
+                        frac=self.params['genes_frac'])
                 gene_subset = np.array(gene_subset)
                 np.savetxt(self.gene_subset_f, gene_subset, fmt='%d')
                 self.has_gene_subset = True
@@ -298,7 +304,7 @@ class SCAnalysis(object):
                 t = time.time()
                 data = self.data
                 read_counts = np.array(data.sum(0)).flatten()
-                self._cell_subset = (read_counts >= self.min_reads) & (read_counts <= self.max_reads)
+                self._cell_subset = (read_counts >= self.params['min_reads']) & (read_counts <= self.params['max_reads'])
                 np.savetxt(self.cell_subset_f, self._cell_subset, fmt='%d')
                 self.has_cell_subset = True
                 self.profiling['cell_subset'] = time.time() - t
@@ -312,7 +318,7 @@ class SCAnalysis(object):
         Data before gene/cell filters, but read count-normalized.
         """
         if self._data_normalized is None:
-            if self.normalize:
+            if self.params['normalize']:
                 self._data_normalized = uncurl.preprocessing.cell_normalize(self.data)
             else:
                 self._data_normalized = self.data
@@ -369,7 +375,7 @@ class SCAnalysis(object):
             # run qualNorm
             init = uncurl.qualNorm(self.data_subset, init)
         m, w, ll = uncurl.run_state_estimation(self.data_subset,
-                clusters=self.clusters,
+                clusters=self.params['clusters'],
                 init_means=init,
                 **self.uncurl_kwargs)
         np.savetxt(self.w_f, w)
@@ -442,7 +448,14 @@ class SCAnalysis(object):
     @property
     def labels(self):
         if not self.has_labels:
-            self._labels = self.w_sampled.argmax(0)
+            if hasattr(self, 'clustering_method') and self.params['clustering_method'] == 'louvain':
+                pass
+            elif hasattr(self, 'clustering_method') and self.params['clustering_method'] == 'leiden':
+                pass
+            elif hasattr(self, 'clustering_method') and self.params['clustering_method'] == 'baseline_leiden':
+                pass
+            else:
+                self._labels = self.w_sampled.argmax(0)
             np.savetxt(self.labels_f, self._labels, fmt='%d')
             self.has_labels = True
         else:
@@ -473,7 +486,7 @@ class SCAnalysis(object):
         Cell sample (after applying data subset) - based on uniform
         simplex sampling on W.
         """
-        if self._cell_sample is None and self.cell_frac == 1:
+        if self._cell_sample is None and self.params['cell_frac'] == 1:
             self._cell_sample = np.arange(self.w.shape[1])
         else:
             if self._cell_sample is None:
@@ -481,7 +494,7 @@ class SCAnalysis(object):
                     self._cell_sample = np.loadtxt(self.cell_sample_f, dtype=int)
                 else:
                     k, cells = self.w.shape
-                    n_samples = int(cells*self.cell_frac)
+                    n_samples = int(cells*self.params['cell_frac'])
                     samples = simplex_sample.sample(k, n_samples)
                     indices = simplex_sample.data_sample(self.w, samples,
                             replace=False)
@@ -527,7 +540,7 @@ class SCAnalysis(object):
                 self._baseline_vis = np.loadtxt(self.baseline_vis_f)
             else:
                 t = time.time()
-                baseline_dim_red = self.baseline_dim_red.lower()
+                baseline_dim_red = self.params['baseline_dim_red'].lower()
                 if baseline_dim_red == 'none':
                     return self.dim_red
                 else:
@@ -566,20 +579,20 @@ class SCAnalysis(object):
                 self._dim_red = np.loadtxt(self.dim_red_f)
             else:
                 t = time.time()
-                self.dim_red_option = self.dim_red_option.lower()
+                self.params['dim_red_option'] = self.params['dim_red_option'].lower()
                 w = self.w_sampled
-                if self.dim_red_option == 'mds':
+                if self.params['dim_red_option'] == 'mds':
                     self._dim_red = uncurl.mds(self.m_sampled, w, 2)
-                elif self.dim_red_option == 'tsne':
+                elif self.params['dim_red_option'] == 'tsne':
                     tsne = TSNE(2, metric=symmetric_kld)
                     self._dim_red = tsne.fit_transform(w.T).T
-                elif self.dim_red_option == 'pca':
+                elif self.params['dim_red_option'] == 'pca':
                     pca = PCA(2)
                     self._dim_red = pca.fit_transform(w.T).T
-                elif self.dim_red_option == 'tsvd':
+                elif self.params['dim_red_option'] == 'tsvd':
                     tsvd = TruncatedSVD(2)
                     self._dim_red = tsvd.fit_transform(w.T).T
-                elif self.dim_red_option == 'umap':
+                elif self.params['dim_red_option'] == 'umap':
                     from umap import UMAP
                     um = UMAP(metric='cosine')
                     self._dim_red = um.fit_transform(w.T).T
@@ -662,7 +675,7 @@ class SCAnalysis(object):
                 self._top_genes_1_vs_rest, self._pvals_1_vs_rest = gene_extraction.one_vs_rest_t(
                         data, labels,
                         eps=float(5*len(set(labels)))/data.shape[1],
-                        test='u')
+                        test=self.params['one_vs_all_test'])
                 with open(self.top_genes_1_vs_rest_f, 'w') as f:
                     json.dump(self._top_genes_1_vs_rest, f,
                             cls=SimpleEncoder)
@@ -993,7 +1006,7 @@ class SCAnalysis(object):
         if mode == '1_vs_rest':
             scores, pvals = gene_extraction.one_vs_rest_t(data, color_track,
                         eps=eps,
-                        calc_pvals=calc_pvals)
+                        calc_pvals=calc_pvals, test='t')
             dense_matrix_h5.store_dict(scores_filename, scores)
             dense_matrix_h5.store_dict(pvals_filename, pvals)
         elif mode == 'pairwise':
@@ -1066,16 +1079,16 @@ class SCAnalysis(object):
         m_new = self.m_sampled
         w_new = self.w_sampled
         if split_or_merge == 'split':
-            self.clusters = w_new.shape[0] + 1
+            self.params['clusters'] = w_new.shape[0] + 1
             c = clusters_to_change[0]
             m_new, w_new = relabeling.split_cluster(data_sampled, m_new, w_new,
                     c, **self.uncurl_kwargs)
         elif split_or_merge == 'merge':
-            self.clusters = w_new.shape[0] - len(clusters_to_change) + 1
+            self.params['clusters'] = w_new.shape[0] - len(clusters_to_change) + 1
             m_new, w_new = relabeling.merge_clusters(data_sampled, m_new, w_new,
                     clusters_to_change, **self.uncurl_kwargs)
         elif split_or_merge == 'new':
-            self.clusters = w_new.shape[0] + 1
+            self.params['clusters'] = w_new.shape[0] + 1
             m_new, w_new = relabeling.new_cluster(data_sampled, m_new, w_new,
                     clusters_to_change, **self.uncurl_kwargs)
         elif split_or_merge == 'delete':
@@ -1099,6 +1112,12 @@ class SCAnalysis(object):
         np.savetxt(self.m_sampled_f, m_new)
         self.has_w_sampled = True
         self.has_m_sampled = True
+
+    def relabel(self, clustering_method='argmax'):
+        """
+        """
+        # TODO: re-runs the clustering to generate new labels
+        # TODO: save params.json
 
     def run_full_analysis(self):
         """
@@ -1195,10 +1214,31 @@ class SCAnalysis(object):
         data_subset = self.data_sampled_all_genes[:, cell_ids]
         return sparse.csc_matrix(data_subset)
 
+    def load_params_json(self):
+        """
+        loads params.json from json file
+        """
+        if os.path.exists(os.path.join(self.data_dir, 'params.json')):
+            with open(os.path.join(self.data_dir, 'params.json')) as f:
+                params = json.load(f)
+                if 'normalize' in params or 'normalize_data' in params:
+                    self.params['normalize'] = True
+                self.params.update(params)
+        if os.path.exists(os.path.join(self.data_dir, 'uncurl_kwargs.json')):
+            with open(os.path.join(self.data_dir, 'uncurl_kwargs.json')) as f:
+                uncurl_kwargs = json.load(f)
+                self.uncurl_kwargs = uncurl_kwargs
+
+    def save_params_json(self):
+        """
+        this should be called whenever params are changed.
+        """
+        with open(os.path.join(self.data_dir, 'params.json'), 'w') as f:
+            json.dump(self.params, f)
 
     def load_params_from_folder(self):
         """
-        If there is a file called 'params.json' in the folder, this loads all the parameters from the file, and adds them to the current object.
+        If there is a saved json file named sc_analysis.json in the json path, this loads all the parameters from the file, and adds them to the current object.
 
         Returns:
             SCAnalysis object loaded from self.data_dir.
@@ -1214,23 +1254,5 @@ class SCAnalysis(object):
                 self.__dict__.update(p2)
                 if 'profiling' not in p:
                     self.profiling = {}
-        if os.path.exists(os.path.join(self.data_dir, 'params.json')):
-            with open(os.path.join(self.data_dir, 'params.json')) as f:
-                params = json.load(f)
-                if 'normalize_data' in params:
-                    self.normalize = True
-                try:
-                    self.clusters = int(params['k'])
-                    self.frac = float(params['genes_frac'])
-                    self.cell_frac = float(params['cell_frac'])
-                    self.min_reads = int(params['min_reads'])
-                    self.max_reads = int(params['max_reads'])
-                    self.baseline_dim_red = params['baseline_vismethod']
-                    self.dim_red_option = params['vismethod']
-                except:
-                    pass
-        if os.path.exists(os.path.join(self.data_dir, 'uncurl_kwargs.json')):
-            with open(os.path.join(self.data_dir, 'uncurl_kwargs.json')) as f:
-                uncurl_kwargs = json.load(f)
-                self.uncurl_kwargs = uncurl_kwargs
+        self.load_params_json()
         return self
