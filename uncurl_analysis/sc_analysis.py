@@ -671,7 +671,6 @@ class SCAnalysis(object):
                 # this is due to a really bizarre up bug with json in python 3
                 labels = labels.tolist()
                 # TODO: have some option for eps?
-                # TODO: test could be 't' or 'u'???
                 self._top_genes_1_vs_rest, self._pvals_1_vs_rest = gene_extraction.one_vs_rest_t(
                         data, labels,
                         eps=float(5*len(set(labels)))/data.shape[1],
@@ -1218,12 +1217,24 @@ class SCAnalysis(object):
         """
         loads params.json from json file
         """
+        import numbers
         if os.path.exists(os.path.join(self.data_dir, 'params.json')):
             with open(os.path.join(self.data_dir, 'params.json')) as f:
                 params = json.load(f)
                 if 'normalize' in params or 'normalize_data' in params:
                     self.params['normalize'] = True
-                self.params.update(params)
+                updated_params = {}
+                # convert params that should be numbers into numbers
+                for k, p in params.items():
+                    if not isinstance(p, bool) and not isinstance(p, numbers.Number):
+                        try:
+                            updated_params[k] = int(p)
+                        except:
+                            try:
+                                updated_params[k] = float(p)
+                            except:
+                                updated_params[k] = p
+                self.params.update(updated_params)
         if os.path.exists(os.path.join(self.data_dir, 'uncurl_kwargs.json')):
             with open(os.path.join(self.data_dir, 'uncurl_kwargs.json')) as f:
                 uncurl_kwargs = json.load(f)
