@@ -148,6 +148,13 @@ class SCAnalysisTest(TestCase):
         self.assertTrue(sca.has_w)
         self.assertTrue(sca.has_m)
         self.assertEqual(sca.cell_subset.shape[0], 400)
+        # TODO: do re-clustering
+        sca.add_color_track('true_labels', self.labs, is_discrete=True)
+        old_labels = sca.labels
+        sca.relabel('louvain')
+        self.assertFalse((old_labels == sca.labels).all())
+        true_labels, is_discrete = sca.get_color_track('true_labels')
+        self.assertTrue(nmi(sca.labels, true_labels) > 0.65)
 
     def test_split_delete_cluster(self):
         """

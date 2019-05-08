@@ -448,12 +448,20 @@ class SCAnalysis(object):
     @property
     def labels(self):
         if not self.has_labels:
-            if hasattr(self, 'clustering_method') and self.params['clustering_method'] == 'louvain':
-                pass
-            elif hasattr(self, 'clustering_method') and self.params['clustering_method'] == 'leiden':
-                pass
-            elif hasattr(self, 'clustering_method') and self.params['clustering_method'] == 'baseline_leiden':
-                pass
+            if 'clustering_method' in self.params and self.params['clustering_method'] == 'louvain':
+                from .clustering_methods import create_graph, run_louvain
+                graph = create_graph(self.w_sampled.T, n_neighbors=20, metric='cosine')
+                labels = run_louvain(graph)
+                self._labels = np.array(labels)
+            elif 'clustering_method' in self.params and self.params['clustering_method'] == 'leiden':
+                from .clustering_methods import create_graph, run_leiden
+                graph = create_graph(self.w_sampled.T, n_neighbors=20, metric='cosine')
+                labels = run_leiden(graph)
+                self._labels = np.array(labels)
+            elif 'clustering_method' in self.params and self.params['clustering_method'] == 'baseline_leiden':
+                from .clustering_methods import baseline_cluster
+                labels = baseline_cluster(self.data_sampled)
+                self._labels = np.array(labels)
             else:
                 self._labels = self.w_sampled.argmax(0)
             np.savetxt(self.labels_f, self._labels, fmt='%d')
@@ -1114,9 +1122,35 @@ class SCAnalysis(object):
 
     def relabel(self, clustering_method='argmax'):
         """
+        Re-generates the labels without creating a new dimensionality
+        reduction or uncurl run.
         """
-        # TODO: re-runs the clustering to generate new labels
-        # TODO: save params.json
+        print('relabeling...')
+        self.params['clustering_method'] = clustering_method.lower()
+        self._labels = None
+        self.has_labels = False
+        self.labels
+        print('done with labels')
+        self.has_top_genes_1_vs_rest = False
+        self._top_genes_1_vs_rest = None
+        self.top_genes_1_vs_rest
+        print('done with top_genes_1_vs_rest')
+        self.has_t_scores = False
+        self._t_scores = None
+        self.t_scores
+        print('done with t_scores')
+        self.has_top_genes = False
+        self._top_genes = None
+        self.top_genes
+        print('done with top_genes')
+        self.has_entropy = False
+        self._entropy = None
+        self.entropy
+        print('done with entropy')
+        self.has_separation_scores = False
+        self._separation_scores = None
+        self.separation_scores
+        self.save_params_json()
 
     def run_full_analysis(self):
         """
