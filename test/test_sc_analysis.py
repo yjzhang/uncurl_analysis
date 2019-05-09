@@ -155,6 +155,8 @@ class SCAnalysisTest(TestCase):
         self.assertFalse((old_labels == sca.labels).all())
         true_labels, is_discrete = sca.get_color_track('true_labels')
         self.assertTrue(nmi(sca.labels, true_labels) > 0.65)
+        sca.relabel('leiden')
+        self.assertTrue(nmi(sca.labels, true_labels) > 0.65)
 
     def test_split_delete_cluster(self):
         """

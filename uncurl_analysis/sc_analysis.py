@@ -618,13 +618,8 @@ class SCAnalysis(object):
                 t = time.time()
                 # this is complicated because we only want the cell subset,
                 # not the gene subset...
-                if self.has_w_sampled:
-                    data = self.data_sampled_all_genes
-                    w = self.w_sampled
-                else:
-                    data = self.data[:, self.cell_subset]
-                    w = self.w
-                labels = w.argmax(0)
+                data = self.data_sampled_all_genes
+                labels = self.labels
                 # TODO: have some option for eps?
                 self._t_scores, self._t_pvals = gene_extraction.pairwise_t(
                         data, labels,
@@ -669,13 +664,8 @@ class SCAnalysis(object):
                     self._pvals_1_vs_rest = json.load(f)
             else:
                 t = time.time()
-                if self.has_w_sampled:
-                    data = self.data_sampled_all_genes
-                    w = self.w_sampled
-                else:
-                    data = self.data[:, self.cell_subset]
-                    w = self.w
-                labels = w.argmax(0)
+                data = self.data_sampled_all_genes
+                labels = self.labels
                 # this is due to a really bizarre up bug with json in python 3
                 labels = labels.tolist()
                 # TODO: have some option for eps?
