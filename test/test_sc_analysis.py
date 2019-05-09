@@ -216,6 +216,7 @@ class SCAnalysisTest(TestCase):
                 data_filename='data.mtx',
                 baseline_dim_red='tsvd',
                 dim_red_option='MDS',
+                clustering_method='leiden',
                 cell_frac=1.0,
                 max_iters=20,
                 inner_max_iters=10)

@@ -1249,7 +1249,7 @@ class SCAnalysis(object):
 
     def load_params_json(self):
         """
-        loads params.json from json file
+        loads params.json and uncurl_kwargs.json from json file
         """
         import numbers
         if os.path.exists(os.path.join(self.data_dir, 'params.json')):
