@@ -458,7 +458,7 @@ class SCAnalysis(object):
                 graph = create_graph(self.w_sampled.T, n_neighbors=20, metric='cosine')
                 labels = run_leiden(graph)
                 self._labels = np.array(labels)
-            elif 'clustering_method' in self.params and self.params['clustering_method'] == 'baseline_leiden':
+            elif 'clustering_method' in self.params and self.params['clustering_method'] == 'leiden_baseline':
                 from .clustering_methods import baseline_cluster
                 labels = baseline_cluster(self.data_sampled)
                 self._labels = np.array(labels)
