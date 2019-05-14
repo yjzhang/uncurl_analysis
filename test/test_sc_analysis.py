@@ -148,6 +148,9 @@ class SCAnalysisTest(TestCase):
         self.assertTrue(sca.has_w)
         self.assertTrue(sca.has_m)
         self.assertEqual(sca.cell_subset.shape[0], 400)
+        means = sca.cluster_means
+        self.assertEqual(means.shape[1], 8)
+        self.assertEqual(means.shape[0], self.data.shape[0])
         # TODO: do re-clustering
         sca.add_color_track('true_labels', self.labs, is_discrete=True)
         old_labels = sca.labels

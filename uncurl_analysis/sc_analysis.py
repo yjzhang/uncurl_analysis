@@ -61,7 +61,7 @@ class SCAnalysis(object):
         # note: each field contains file names, and whether or not
         # the analysis is complete.
         self.data_dir = data_dir
-        # TODO: params is a dict of parameters...
+        # params is a dict of parameters...
         self.params = {}
         self.params['clusters'] = clusters
         self.params['min_reads'] = min_reads
@@ -133,6 +133,10 @@ class SCAnalysis(object):
         self.labels_f = os.path.join(data_dir, 'labels.txt')
         self.has_labels = os.path.exists(self.labels_f)
         self._labels = None
+
+        self.cluster_means_f = os.path.join(data_dir, 'cluster_means.txt')
+        self.has_cluster_means = os.path.exists(self.cluster_means_f)
+        self._cluster_means = None
 
         self.cluster_names_f = os.path.join(data_dir, 'cluster_names.txt')
         self.has_cluster_names = os.path.exists(self.cluster_names_f)
@@ -210,7 +214,7 @@ class SCAnalysis(object):
         # dict of color tracks to (is_discrete, filename)
         self._color_tracks = None
 
-        self._color_tracks_cache = {}
+        self.color_tracks_cache = {}
 
         # custom cell selections
         self.custom_selections_f = os.path.join(data_dir, 'custom_selections.json')
@@ -470,6 +474,28 @@ class SCAnalysis(object):
             if self._labels is None:
                 self._labels = np.loadtxt(self.labels_f, dtype=int)
         return self._labels
+
+    @property
+    def cluster_means(self):
+        """
+        Means of the cells in each cluster over all genes.
+
+        This is a 2d dense array of shape (genes, k).
+        """
+        if self._cluster_means is None:
+            if self.has_cluster_means:
+                self._cluster_means = np.loadtxt(self.cluster_means_f)
+            else:
+                data = self.data_sampled_all_genes
+                means = np.zeros((data.shape[0], self.labels.max()+1))
+                for lab in set(self.labels):
+                    if sparse.issparse(data):
+                        means[:, lab] = np.array(data[:, self.labels==lab].mean(1)).flatten()
+                    else:
+                        means[:, lab] = data[:, self.labels==lab].mean(1)
+                np.savetxt(self.cluster_means_f, means)
+                self._cluster_means = means
+        return self._cluster_means
 
     @property
     def mds_means(self):
@@ -919,10 +945,10 @@ class SCAnalysis(object):
         Returns a tuple for a given color track name: data, is_discrete, where
         data is a 1d array, and is_discrete is a boolean.
         """
-        if not hasattr(self, '_color_tracks_cache'):
-            self._color_tracks_cache = {}
+        if not hasattr(self, 'color_tracks_cache'):
+            self.color_tracks_cache = {}
         try:
-            data, is_discrete = self._color_tracks_cache[color_track_name]
+            data, is_discrete = self.color_tracks_cache[color_track_name]
             return data, is_discrete
         except:
             pass
@@ -942,7 +968,7 @@ class SCAnalysis(object):
                 data = np.load(filename)
             if len(data) > len(self.cell_sample):
                 data = data[self.cell_subset][self.cell_sample]
-            self._color_tracks_cache[color_track_name] = (data, is_discrete)
+            self.color_tracks_cache[color_track_name] = (data, is_discrete)
             return data, is_discrete
         else:
             return None
@@ -1030,32 +1056,9 @@ class SCAnalysis(object):
         """
         Removes all cached data, saves to json
         """
-        # TODO: use some metaprogramming to get around this
-        self._data = None
-        self._data_normalized = None
-        self._data_subset = None
-        self._data_sampled_all_genes = None
-        self._gene_names = None
-        self._gene_subset = None
-        self._cell_sample = None
-        self._w = None
-        self._w_sampled = None
-        self._m = None
-        self._m_sampled = None
-        self._mds_means = None
-        self._labels = None
-        self._cell_subset = None
-        self._baseline_vis = None
-        self._dim_red = None
-        self._top_genes = None
-        self._pvals = None
-        self._top_genes_1_vs_rest = None
-        self._pvals_1_vs_rest = None
-        self._t_scores = None
-        self._t_pvals = None
-        self._separation_scores = None
-        self._entropy = None
-        self._separation_genes = None
+        for key, val in self.__dict__.items():
+            if key.startswith('_'):
+                self.__dict__[key] = None
         with open(self.json_f, 'w') as f:
             json.dump(self.__dict__, f,
                     cls=SimpleEncoder)
@@ -1121,6 +1124,9 @@ class SCAnalysis(object):
         self.has_labels = False
         self.labels
         print('done with labels')
+        self.has_cluster_means = False
+        self._cluster_means = None
+        self.cluster_means
         self.has_top_genes_1_vs_rest = False
         self._top_genes_1_vs_rest = None
         self.top_genes_1_vs_rest
@@ -1169,6 +1175,9 @@ class SCAnalysis(object):
         self._labels = None
         self.labels
         print('done with labels')
+        self.has_cluster_means = False
+        self._cluster_means = None
+        self.cluster_means
         #self.has_baseline_vis = False
         #self._baseline_vis = None
         #self.baseline_vis
@@ -1285,6 +1294,8 @@ class SCAnalysis(object):
                 # don't override True values with False values...
                 for key, val in p.items():
                     if isinstance(key, str) and key.startswith('has_') and key in self.__dict__ and self.__dict__[key] is True:
+                        del p2[key]
+                    if val is None and self.__dict__[key] is not None:
                         del p2[key]
                 self.__dict__.update(p2)
                 if 'profiling' not in p:
