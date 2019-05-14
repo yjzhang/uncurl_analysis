@@ -47,6 +47,7 @@ class H5Dict(object):
     """
     Read-only h5-backed dict view, without loading the file directly.
     Really naive... should be for few keys, with large arrays per key.
+    All keys are treated as strings.
 
     All items are stored under root.
     """
@@ -64,12 +65,16 @@ class H5Dict(object):
         data_table.close()
         f.close()
 
-    def __getitem__(self, key):
-        f = tables.open_file(self.h5_filename, 'r')
+    def __getitem__(self, key, f=None):
+        close_f = False
+        if f is None:
+            close_f = True
+            f = tables.open_file(self.h5_filename, 'r')
         data_f = f.get_node('/_' + str(key))
         data = data_f.read()
         data_f.close()
-        f.close()
+        if close_f:
+            f.close()
         return data
 
     def __len__(self):
@@ -84,8 +89,11 @@ class H5Dict(object):
 
     def items(self):
         """Returns an iterator over all key-item pairs"""
-        for key in self.keys():
-            yield key, self.__getitem__(key)
+        keys = self.keys()
+        f = tables.open_file(self.h5_filename, 'r')
+        for key in keys:
+            yield key, self.__getitem__(key, f)
+        f.close()
 
 def store_array(h5_filename, data):
     """
