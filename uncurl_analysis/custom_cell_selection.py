@@ -109,12 +109,14 @@ class CustomColorMap(object):
         """
         Labels the cells in the given SCAnalysis object.
         """
-        cell_labels = np.array(['default' for x in range(len(sca.cell_sample))])
+        cell_labels = np.array([None for x in range(len(sca.cell_sample))])
         for label in self.labels:
             indices = label.select_cells(sca)
             if len(indices) == 0:
                 continue
             cell_labels[indices] = label.name
+        cell_labels[cell_labels==None] = 'default'
+        cell_labels = cell_labels.astype(str)
         return cell_labels
 
 

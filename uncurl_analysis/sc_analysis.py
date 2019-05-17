@@ -527,6 +527,7 @@ class SCAnalysis(object):
                 if self.has_cell_sample:
                     self._cell_sample = np.loadtxt(self.cell_sample_f, dtype=int)
                 else:
+                    # TODO: balance between random sample and simplex sample
                     k, cells = self.w.shape
                     n_samples = int(cells*self.params['cell_frac'])
                     samples = simplex_sample.sample(k, n_samples)
@@ -904,7 +905,6 @@ class SCAnalysis(object):
             color_track_name (str)
             labels (list): list of labels
         """
-        # TODO: deal with criteria?
         if color_track_name in self.get_color_track_names():
             raise Exception('color track name already in use.')
         self.custom_selections[color_track_name] = custom_cell_selection.CustomColorMap(color_track_name)
