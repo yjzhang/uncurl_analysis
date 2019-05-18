@@ -77,7 +77,7 @@ class H5Dict(object):
         if f is None:
             close_f = True
             f = tables.open_file(self.h5_filename, 'r')
-        data_f = f.get_node(create_key(key))
+        data_f = f.get_node('/' + create_key(key))
         data = data_f.read()
         data_f.close()
         if close_f:
