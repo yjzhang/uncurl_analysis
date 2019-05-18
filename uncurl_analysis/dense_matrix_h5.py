@@ -42,6 +42,13 @@ class H5Array(object):
         f.close()
         return data
 
+def create_key(key):
+    """
+    Converts an object into a key that can be used in a h5 object.
+    """
+    key = '_' + str(key)
+    key = key.replace('/', '-')
+    return key
 
 class H5Dict(object):
     """
@@ -56,7 +63,7 @@ class H5Dict(object):
         self.h5_filename = h5_filename
 
     def __setitem__(self, key, val):
-        key = '_' + str(key)
+        key = create_key(key)
         f = tables.open_file(self.h5_filename, 'a')
         filters = tables.Filters(complevel=5, complib='zlib')
         data_table = f.create_carray('/',
@@ -70,7 +77,7 @@ class H5Dict(object):
         if f is None:
             close_f = True
             f = tables.open_file(self.h5_filename, 'r')
-        data_f = f.get_node('/_' + str(key))
+        data_f = f.get_node(create_key(key))
         data = data_f.read()
         data_f.close()
         if close_f:
