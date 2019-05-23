@@ -1293,6 +1293,8 @@ class SCAnalysis(object):
                 p2 = p.copy()
                 # don't override True values with False values...
                 for key, val in p.items():
+                    if key not in self.__dict__:
+                        continue
                     if isinstance(key, str) and key.startswith('has_') and key in self.__dict__ and self.__dict__[key] is True:
                         del p2[key]
                     if val is None and self.__dict__[key] is not None:
