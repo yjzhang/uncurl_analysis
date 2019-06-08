@@ -61,13 +61,14 @@ def split_cluster(data, m_old, w_old, cluster_to_split, **uncurl_params):
                        new_m,
                        m_old[:, cluster_to_split+1:]])
     # extend new_w to encompass all cells
+    # TODO: set new row as last cluster
     new_w_2 = np.zeros((2, w_old.shape[1]))
     new_w_2[0,:] = w_old[cluster_to_split]/2
     new_w_2[1,:] = w_old[cluster_to_split]/2
     new_w_2[:,cell_subset] = new_w
     w_init = np.vstack([w_old[:cluster_to_split, :],
-                       new_w_2,
-                       w_old[cluster_to_split+1:, :]])
+                       w_old[cluster_to_split+1:, :],
+                       new_w_2])
     w_init = w_init/w_init.sum(0)
     m_new, w_new, ll_new = uncurl.run_state_estimation(data,
             clusters=k,
