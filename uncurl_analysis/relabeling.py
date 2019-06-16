@@ -58,8 +58,8 @@ def split_cluster(data, m_old, w_old, cluster_to_split, **uncurl_params):
     new_m, new_w = state_estimation.initialize_means_weights(data_subset, 2,
             max_assign_weight=mean_w)
     m_init = np.hstack([m_old[:, :cluster_to_split],
-                       new_m,
-                       m_old[:, cluster_to_split+1:]])
+                       m_old[:, cluster_to_split+1:],
+                       new_m,])
     # extend new_w to encompass all cells
     # TODO: set new row as last cluster
     new_w_2 = np.zeros((2, w_old.shape[1]))

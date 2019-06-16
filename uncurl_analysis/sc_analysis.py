@@ -520,7 +520,7 @@ class SCAnalysis(object):
         Cell sample (after applying data subset) - based on uniform
         simplex sampling on W.
         """
-        if self._cell_sample is None and self.params['cell_frac'] == 1:
+        if self._cell_sample is None and self.params['cell_frac'] >= 1:
             self._cell_sample = np.arange(self.w.shape[1])
         else:
             if self._cell_sample is None:
@@ -530,9 +530,17 @@ class SCAnalysis(object):
                     # TODO: balance between random sample and simplex sample
                     k, cells = self.w.shape
                     n_samples = int(cells*self.params['cell_frac'])
-                    samples = simplex_sample.sample(k, n_samples)
+                    n_simplex_samples = int(n_samples/2)
+                    n_rand_samples = n_samples - n_simplex_samples
+                    samples = simplex_sample.sample(k, n_simplex_samples)
                     indices = simplex_sample.data_sample(self.w, samples,
                             replace=False)
+                    unsampled_indices = [x for x in range(cells) if x not in set(indices)]
+                    import random
+                    indices_random = random.sample(unsampled_indices, n_rand_samples)
+                    full_indices = np.concatenate([indices, indices_random])
+                    full_indices.sort()
+                    indices = full_indices
                     np.savetxt(self.cell_sample_f, indices, fmt='%d')
                     self.has_cell_sample = True
                     self._cell_sample = indices
