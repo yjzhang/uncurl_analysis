@@ -523,7 +523,7 @@ class SCAnalysis(object):
         simplex sampling on W.
         """
         if self._cell_sample is None and self.params['cell_frac'] >= 1:
-            self._cell_sample = np.arange(len(self.cell_subset))
+            self._cell_sample = np.arange(sum(self.cell_subset))
         else:
             if self._cell_sample is None:
                 if self.has_cell_sample:
