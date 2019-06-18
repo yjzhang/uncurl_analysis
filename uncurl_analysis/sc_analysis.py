@@ -273,6 +273,8 @@ class SCAnalysis(object):
             if not self.has_gene_subset:
                 t = time.time()
                 data = self.data_normalized[:, self.cell_subset]
+                if 'genes_frac' not in self.params or not isinstance(self.params['genes_frac'], float):
+                    self.params['genes_frac'] = 0.2
                 gene_subset = uncurl.max_variance_genes(data, nbins=5,
                         frac=self.params['genes_frac'])
                 gene_subset = np.array(gene_subset)
@@ -1276,6 +1278,8 @@ class SCAnalysis(object):
                             except:
                                 updated_params[k] = p
                 self.params.update(updated_params)
+                if 'frac' in params:
+                    self.params['genes_frac'] = float(params['frac'])
         if os.path.exists(os.path.join(self.data_dir, 'uncurl_kwargs.json')):
             with open(os.path.join(self.data_dir, 'uncurl_kwargs.json')) as f:
                 uncurl_kwargs = json.load(f)
