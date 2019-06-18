@@ -308,8 +308,8 @@ class SCAnalysis(object):
         if self._cell_subset is None:
             if not self.has_cell_subset:
                 t = time.time()
-                data = self.data
-                read_counts = np.array(data.sum(0)).flatten()
+                read_counts = self.read_counts
+                print('min_reads:', self.params['min_reads'], 'max_reads:', self.params['max_reads'])
                 self._cell_subset = (read_counts >= self.params['min_reads']) & (read_counts <= self.params['max_reads'])
                 np.savetxt(self.cell_subset_f, self._cell_subset, fmt='%d')
                 self.has_cell_subset = True
@@ -523,7 +523,7 @@ class SCAnalysis(object):
         simplex sampling on W.
         """
         if self._cell_sample is None and self.params['cell_frac'] >= 1:
-            self._cell_sample = np.arange(self.w.shape[1])
+            self._cell_sample = np.arange(len(self.cell_subset))
         else:
             if self._cell_sample is None:
                 if self.has_cell_sample:
@@ -1231,7 +1231,7 @@ class SCAnalysis(object):
             files_to_save = set([])
         else:
             files_to_save = set(files_to_save)
-        files_to_save.update(['data.txt', 'data.txt.gz', 'data.mtx', 'data.mtx.gz', 'init.txt', 'gene_names.txt', 'params.json',
+        files_to_save.update(['data.txt', 'data.txt.gz', 'data.mtx', 'data.mtx.gz', 'init.txt', 'gene_names.txt',
             'preprocess.json', 'color_tracks.json', 'vis_summary.html'])
         for filename in os.listdir(self.data_dir):
             if filename not in files_to_save and not filename.startswith('color_track_') and not filename.startswith('diffexp_'):
