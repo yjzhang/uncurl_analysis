@@ -49,8 +49,8 @@ class SCAnalysis(object):
             max_reads=1e10,
             frac=0.2,
             cell_frac=1.0,
-            dim_red_option='mds',
-            baseline_dim_red='none',
+            dim_red_option='tsne',
+            baseline_dim_red='tsne',
             clustering_method='argmax',
             one_vs_all_test='t',
             **uncurl_kwargs):
