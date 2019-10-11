@@ -58,18 +58,19 @@ class SCAnalysis(object):
         Args:
             data_dir (str): directory where data is stored
         """
+        # TODO: if sc_analysis.json already exists, load it.
         # note: each field contains file names, and whether or not
         # the analysis is complete.
         self.data_dir = data_dir
         # params is a dict of parameters...
         self.params = {}
-        self.params['clusters'] = clusters
-        self.params['min_reads'] = min_reads
-        self.params['max_reads'] = max_reads
-        self.params['normalize'] = normalize
+        self.params['clusters'] = int(clusters)
+        self.params['min_reads'] = int(min_reads)
+        self.params['max_reads'] = int(max_reads)
+        self.params['normalize'] = bool(normalize)
         self.params['is_sparse'] = data_is_sparse
-        self.params['genes_frac'] = frac
-        self.params['cell_frac'] = cell_frac
+        self.params['genes_frac'] = float(frac)
+        self.params['cell_frac'] = float(cell_frac)
         self.params['baseline_dim_red'] = baseline_dim_red.lower()
         self.params['dim_red_option'] = dim_red_option.lower()
         self.params['clustering_method'] = clustering_method.lower()
@@ -138,7 +139,7 @@ class SCAnalysis(object):
         self.has_cluster_means = os.path.exists(self.cluster_means_f)
         self._cluster_means = None
 
-        self.cluster_names_f = os.path.join(data_dir, 'cluster_names.txt')
+        self.cluster_names_f = os.path.join(data_dir, 'cluster_names.json')
         self.has_cluster_names = os.path.exists(self.cluster_names_f)
         self._cluster_names = None
 
@@ -225,6 +226,7 @@ class SCAnalysis(object):
         self.profiling = {}
 
         self.json_f = os.path.join(data_dir, 'sc_analysis.json')
+
 
 
     @property
@@ -1060,6 +1062,13 @@ class SCAnalysis(object):
             json.dump(self.color_tracks, f,
                     cls=SimpleEncoder)
         return scores, pvals
+
+    @property
+    def cluster_names(self):
+        """
+        annotated names for clusters???
+        """
+        # TODO
 
 
     def save_json_reset(self):

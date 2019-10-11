@@ -55,6 +55,10 @@ class LabelCriterion(object):
             elif self.comparison == '!=':
                 return np.where(color_track != str(self.target))[0]
 
+    def __repr__(self):
+        return 'LabelCriterion({0}, {1}, {2}, {3}, {4})'.format(self.selection_type, self.comparison, self.target, self.and_or, self.value)
+
+
 class CustomLabel(object):
     """
     this class represents a single label
