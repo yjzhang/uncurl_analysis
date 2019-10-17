@@ -16,6 +16,7 @@ class LabelCriterion(object):
             comparison (str): '=', '!=', '>=', '<='
             target (str or number): a representation of the target...
             and_or (str): 'and' or 'or'. If 'and': the label MUST include the criterion. If 'or': the label can possibly include the criterion.
+            value (str): only used if selection_type is gene - this is the name of the gene.
         """
         self.selection_type = selection_type
         self.comparison = comparison
@@ -42,6 +43,11 @@ class LabelCriterion(object):
                 return np.where(gene_values >= float(self.target))[0]
             elif self.comparison == '<=':
                 return np.where(gene_values <= float(self.target))[0]
+            elif self.comparison == '>':
+                return np.where(gene_values > float(self.target))[0]
+            elif self.comparison == '<':
+                return np.where(gene_values < float(self.target))[0]
+        # TODO
         elif self.selection_type == 'read_counts':
             pass
         elif self.selection_type == 'selection':
