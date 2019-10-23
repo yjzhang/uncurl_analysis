@@ -88,10 +88,10 @@ class CustomLabel(object):
         """
         all_indices = set()
         self.criteria.sort(key=lambda x: x.and_or, reverse=True)
-        for c in self.criteria:
+        for i, c in enumerate(self.criteria):
             indices = c.select(sca)
             m = c.and_or
-            if m == 'and' and len(all_indices) > 0:
+            if m == 'and' and i > 0:
                 all_indices.intersection_update(indices)
             else:
                 all_indices.update(indices)
