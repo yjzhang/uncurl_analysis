@@ -50,7 +50,7 @@ class SCAnalysis(object):
             frac=0.2,
             cell_frac=1.0,
             dim_red_option='tsne',
-            baseline_dim_red='tsne',
+            baseline_dim_red=None,
             clustering_method='argmax',
             one_vs_all_test='t',
             **uncurl_kwargs):
@@ -71,8 +71,8 @@ class SCAnalysis(object):
         self.params['is_sparse'] = data_is_sparse
         self.params['genes_frac'] = float(frac)
         self.params['cell_frac'] = float(cell_frac)
-        self.params['baseline_dim_red'] = baseline_dim_red.lower()
         self.params['dim_red_option'] = dim_red_option.lower()
+        self.params['baseline_dim_red'] = dim_red_option.lower() if baseline_dim_red is None else baseline_dim_red
         self.params['clustering_method'] = clustering_method.lower()
         self.params['one_vs_all_test'] = one_vs_all_test
 
@@ -350,14 +350,27 @@ class SCAnalysis(object):
         Array of gene names
         """
         if self._gene_names is None:
-            if self.gene_names_f.endswith('.csv'):
-                import pandas as pd
+            if self.gene_names_f.endswith('genes.csv'):
                 try:
-                    gene_names = pd.read_csv(self.gene_names_f)
-                    self._gene_names = gene_names.gene_name
+                    import pandas as pd
+                    # this captures the split-seq output format
+                    if self.gene_names_f.endswith('genes.csv'):
+                        gene_names = pd.read_csv(self.gene_names_f)
+                    if 'gene_name' in gene_names.columns:
+                        self._gene_names = gene_names.gene_name.values
+                    elif 'gene_names' in gene_names.columns:
+                        self._gene_names = gene_names.gene_name.values
+                    else:
+                        self._gene_names = np.loadtxt(self.gene_names_f, dtype=str)
+                        # default gene names
+                        if len(self._gene_names) <= 1:
+                            self._gene_names = np.array(['gene_{0}'.format(i) for i in range(self.data.shape[0])])
+                    return self._gene_names
                 except:
-                    # default gene names
-                    self._gene_names = np.array(['gene_{0}'.format(i) for i in range(self.data.shape[0])])
+                    try:
+                        self._gene_names = np.loadtxt(self.gene_names_f, dtype=str)
+                    except:
+                        self._gene_names = np.array(['gene_{0}'.format(i) for i in range(self.data.shape[0])])
                     return self._gene_names
             else:
                 try:
@@ -562,7 +575,7 @@ class SCAnalysis(object):
     @property
     def data_sampled_all_genes(self):
         """
-        Data after passed through the gene/cell filters, and sampled.
+        Data after passed through the gene/cell filters, and sampled. That is, displayed cells.
         """
         if self._data_sampled_all_genes is None:
             if not self.has_data_sampled_all_genes:
@@ -1242,6 +1255,9 @@ class SCAnalysis(object):
             files_to_save = set(files_to_save)
         files_to_save.update(['data.txt', 'data.txt.gz', 'data.mtx', 'data.mtx.gz', 'init.txt', 'gene_names.txt',
             'preprocess.json', 'color_tracks.json', 'vis_summary.html'])
+        for key, val in self.color_tracks.items():
+            pass
+        # TODO: save uploaded color tracks, delete c
         for filename in os.listdir(self.data_dir):
             if filename not in files_to_save and not filename.startswith('color_track_') and not filename.startswith('diffexp_'):
                 os.remove(os.path.join(self.data_dir, filename))
