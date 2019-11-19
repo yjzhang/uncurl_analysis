@@ -21,10 +21,11 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path):
     """
     if len(data_paths) == 1 and len(gene_paths) == 1:
         # TODO: copy files into the correct name
-        gene_output_path = gene_paths[0].replace('_1', '')
         data_output_path = data_paths[0].replace('_1', '')
-        os.rename(gene_paths[0], gene_output_path)
         os.rename(data_paths[0], data_output_path)
+        if gene_paths[0] is not None:
+            gene_output_path = gene_paths[0].replace('_1', '')
+            os.rename(gene_paths[0], gene_output_path)
         return data_output_path, gene_output_path
     all_data = []
     all_genes = []
@@ -43,6 +44,7 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path):
         genes_set.update(genes)
         all_data.append(data)
     # TODO: save data_array?
+    np.savetxt(os.path.join(output_path, 'samples.txt'), data_array, fmt='%s')
     # combine gene lists
     # decide whether any of the genes are different
     all_genes_same = True

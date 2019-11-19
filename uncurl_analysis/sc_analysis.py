@@ -72,7 +72,7 @@ class SCAnalysis(object):
         self.params['genes_frac'] = float(frac)
         self.params['cell_frac'] = float(cell_frac)
         self.params['dim_red_option'] = dim_red_option.lower()
-        self.params['baseline_dim_red'] = dim_red_option.lower() if baseline_dim_red is None else baseline_dim_red
+        self.params['baseline_dim_red'] = baseline_dim_red
         self.params['clustering_method'] = clustering_method.lower()
         self.params['one_vs_all_test'] = one_vs_all_test
 
@@ -600,7 +600,10 @@ class SCAnalysis(object):
                 self._baseline_vis = np.loadtxt(self.baseline_vis_f)
             else:
                 t = time.time()
-                baseline_dim_red = self.params['baseline_dim_red'].lower()
+                if self.params['baseline_dim_red'] is None:
+                    baseline_dim_red = self.params['dim_red_option'].lower()
+                else:
+                    baseline_dim_red = self.params['baseline_dim_red']
                 if baseline_dim_red == 'none':
                     return self.dim_red
                 else:
