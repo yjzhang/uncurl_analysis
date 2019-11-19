@@ -600,10 +600,10 @@ class SCAnalysis(object):
                 self._baseline_vis = np.loadtxt(self.baseline_vis_f)
             else:
                 t = time.time()
-                if self.params['baseline_dim_red'] is None:
+                if self.params['baseline_dim_red'] is None or not isinstance(self.params['baseline_dim_red'], str):
                     baseline_dim_red = self.params['dim_red_option'].lower()
                 else:
-                    baseline_dim_red = self.params['baseline_dim_red']
+                    baseline_dim_red = self.params['baseline_dim_red'].lower()
                 if baseline_dim_red == 'none':
                     return self.dim_red
                 else:
