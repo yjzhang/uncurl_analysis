@@ -6,7 +6,7 @@ import numpy as np
 import scipy.io
 from scipy import sparse
 import uncurl
-from uncurl.sparse_utils import symmetric_kld
+#from uncurl.sparse_utils import symmetric_kld
 
 from . import gene_extraction, relabeling, sparse_matrix_h5, dense_matrix_h5, custom_cell_selection
 from .entropy import entropy
@@ -626,6 +626,8 @@ class SCAnalysis(object):
                         um = UMAP()
                         data_tsvd = tsvd.fit_transform(data_log_norm.T)
                         data_dim_red = um.fit_transform(data_tsvd)
+                    else:
+                        raise Exception('dimensionality reduction name {0} is unknown'.format(baseline_dim_red))
                     self._baseline_vis = data_dim_red.T
                     np.savetxt(self.baseline_vis_f, self._baseline_vis)
                     self.has_baseline_vis = True
@@ -647,7 +649,10 @@ class SCAnalysis(object):
                 if self.params['dim_red_option'] == 'mds':
                     self._dim_red = uncurl.mds(self.m_sampled, w, 2)
                 elif self.params['dim_red_option'] == 'tsne':
-                    tsne = TSNE(2, metric=symmetric_kld)
+                    # TODO: do we actually want to use the symmetric kld metric?
+                    # it kills performance without doing much...
+                    # metric=symmetric_kld
+                    tsne = TSNE(2)
                     self._dim_red = tsne.fit_transform(w.T).T
                 elif self.params['dim_red_option'] == 'pca':
                     pca = PCA(2)
