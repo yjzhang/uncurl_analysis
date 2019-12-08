@@ -853,24 +853,25 @@ class SCAnalysis(object):
         if ',' in gene_name:
             gene_names = gene_name.split(',')
             data = self.data_sampled_gene(gene_names[0].strip())
-            # TODO: this is causing an error
             for g in gene_names[1:]:
                 result = self.data_sampled_gene(g.strip(), use_mw)
-                data += result
+                if result:
+                    data += result
             return data
         gene_name_indices = np.where(self.gene_names == gene_name)[0]
+        print('gene_name_indices:', gene_name_indices)
         if len(gene_name_indices) == 0:
             return []
         # TODO: what if there are multiple indices for a given gene name?
         if len(gene_name_indices) > 1:
-            print('Warning: duplicate gene name detected. Returning arbitrary gene.')
+            print('Warning: duplicate gene name detected. Returning sum of values of both genes.')
         gene_index = gene_name_indices[0]
         if use_mw:
             # we re-calculate the matrix multiplication every time...
             # and use caching to store the values???
             m = self.m_full
             w = self.w
-            data_subset = m[gene_index,:].dot(w).flatten()
+            data_subset = m[gene_name_indices,:].dot(w).flatten()
             return data_subset[self.cell_sample]
         else:
             if os.path.exists(self.data_sampled_all_genes_f):
@@ -879,7 +880,10 @@ class SCAnalysis(object):
                         gene_index)
             else:
                 data = self.data_sampled_all_genes
-                data_gene = data[gene_name_indices, :]
+                if len(gene_name_indices) > 1:
+                    data_gene = data[gene_name_indices, :].sum(0)
+                else:
+                    data_gene = data[gene_name_indices, :]
                 if sparse.issparse(data_gene):
                     return data_gene.toarray().flatten()
                 else:
