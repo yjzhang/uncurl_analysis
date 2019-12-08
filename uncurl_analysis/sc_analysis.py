@@ -855,7 +855,7 @@ class SCAnalysis(object):
             data = self.data_sampled_gene(gene_names[0].strip())
             for g in gene_names[1:]:
                 result = self.data_sampled_gene(g.strip(), use_mw)
-                if result:
+                if len(result) > 0:
                     data += result
             return data
         gene_name_indices = np.where(self.gene_names == gene_name)[0]
