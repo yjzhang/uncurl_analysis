@@ -221,6 +221,11 @@ class SCAnalysis(object):
         self.custom_selections_f = os.path.join(data_dir, 'custom_selections.json')
         self._custom_selections = None
 
+        # dimensionality reduction of genes
+        # TODO
+        self.gene_dim_red_f = os.path.join(data_dir, 'gene_dim_red.txt')
+        self.has_gene_dim_red = os.path.exists(self.gene_dim_red_f)
+        self._gene_dim_red = None
 
         # dict of output_name : running time
         self.profiling = {}
@@ -431,7 +436,6 @@ class SCAnalysis(object):
     def w_sampled(self):
         if not self.has_w_sampled:
             w_sampled = self.w[:, self.cell_sample]
-            # TODO: should we catch this result? is it worthwhile?
             return w_sampled
         else:
             if self._w_sampled is None:
@@ -668,6 +672,16 @@ class SCAnalysis(object):
                 self.has_dim_red = True
                 self.profiling['dim_red'] = time.time() - t
         return self._dim_red
+
+    @property
+    def gene_dim_red(self):
+        if self._gene_dim_red is None:
+            if self.has_gene_dim_red:
+                self._gene_dim_red = np.loadtxt(self.gene_dim_red_f)
+            else:
+                # TODO: add stuff
+                pass
+        return self._gene_dim_red
 
     @property
     def t_scores(self):
