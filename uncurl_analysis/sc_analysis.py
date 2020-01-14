@@ -227,6 +227,14 @@ class SCAnalysis(object):
         self.has_gene_dim_red = os.path.exists(self.gene_dim_red_f)
         self._gene_dim_red = None
 
+        self.baseline_gene_dim_red_f = os.path.join(data_dir, 'baseline_gene_dim_red.txt')
+        self.has_baseline_gene_dim_red = os.path.exists(self.baseline_gene_dim_red_f)
+        self._baseline_gene_dim_red = None
+
+        self.gene_clusters_f = os.path.join(data_dir, 'gene_clusters.txt')
+        self.has_gene_clusters = os.path.exists(self.gene_clusters_f)
+        self._gene_clusters = None
+
         # dict of output_name : running time
         self.profiling = {}
 
@@ -675,13 +683,65 @@ class SCAnalysis(object):
 
     @property
     def gene_dim_red(self):
+        """dimensionality-reduced view of the genes """
         if self._gene_dim_red is None:
             if self.has_gene_dim_red:
                 self._gene_dim_red = np.loadtxt(self.gene_dim_red_f)
             else:
-                # TODO: add stuff
-                pass
+                t = time.time()
+                self.params['dim_red_option'] = self.params['dim_red_option'].lower()
+                m = self.m_full
+                if self.params['dim_red_option'] == 'tsne':
+                    tsne = TSNE(2)
+                    self._gene_dim_red = tsne.fit_transform(m).T
+                elif self.params['dim_red_option'] == 'pca':
+                    pca = PCA(2)
+                    self._gene_dim_red = pca.fit_transform(m).T
+                elif self.params['dim_red_option'] == 'tsvd':
+                    tsvd = TruncatedSVD(2)
+                    self._gene_dim_red = tsvd.fit_transform(m).T
+                elif self.params['dim_red_option'] == 'umap':
+                    from umap import UMAP
+                    um = UMAP(metric='cosine')
+                    self._gene_dim_red = um.fit_transform(m).T
+                np.savetxt(self.gene_dim_red_f, self._gene_dim_red)
+                self.has_gene_dim_red = True
+                self.profiling['gene_dim_red'] = time.time() - t
         return self._gene_dim_red
+
+    @property
+    def gene_clusters(self):
+        """Array of ints, of length genes, representing the cluster label of each gene."""
+        if self._gene_clusters is None:
+            if self.has_gene_clusters:
+                self._gene_clusters = np.loadtxt(self.gene_clusters_f)
+            else:
+                n_clusters = self.params['clusters']
+                data = self.m_full
+                if 'clustering_method' in self.params and self.params['clustering_method'] == 'louvain':
+                    from .clustering_methods import create_graph, run_louvain
+                    graph = create_graph(data, n_neighbors=20, metric='cosine')
+                    labels = run_louvain(graph)
+                    self._gene_clusters = np.array(labels)
+                elif 'clustering_method' in self.params and self.params['clustering_method'] == 'leiden':
+                    from .clustering_methods import create_graph, run_leiden
+                    graph = create_graph(data, n_neighbors=20, metric='cosine')
+                    labels = run_leiden(graph)
+                    self._gene_clusters = np.array(labels)
+                elif 'clustering_method' in self.params and self.params['clustering_method'] == 'leiden_baseline':
+                    from .clustering_methods import baseline_cluster
+                    labels = baseline_cluster(data)
+                    self._gene_clusters = np.array(labels)
+                else:
+                    # run k-means clustering on m_full
+                    from sklearn.cluster import KMeans
+                    km = KMeans(n_clusters)
+                    km.fit(data)
+                    labels = km._labels
+                    self._gene_clusters = np.array(labels)
+                np.savetxt(self.gene_clusters_f, self._gene_clusters, fmt='%d')
+                self.has_gene_clusters = True
+        return self._gene_clusters
 
     @property
     def t_scores(self):
@@ -1268,6 +1328,12 @@ class SCAnalysis(object):
         self.has_separation_scores = False
         self._separation_scores = None
         self.separation_scores
+        self.has_gene_dim_red = False
+        self._gene_dim_red = None
+        self.gene_dim_red
+        self.has_gene_clusters = False
+        self._gene_clusters = None
+        self.gene_clusters
 
     def delete_uncurl_results(self, files_to_save=None):
         """

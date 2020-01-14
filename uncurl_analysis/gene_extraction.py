@@ -6,7 +6,8 @@ from scipy import sparse
 
 from uncurl_analysis.sparse_gene_extraction import csc_c_scores, csc_weighted_c_scores, csc_weighted_t_test, csc_unweighted_t_test, t_test_c_scores, t_test_separation_scores, csc_unweighted_1_vs_rest_t_test, csc_unweighted_1_vs_rest_rank_sum_test
 
-# TODO: efficient sparse implementation of find_overexpressed_genes?
+# TODO: try normalizing by cell total read count
+
 def find_overexpressed_genes(data, labels, eps=0):
     """
     Returns a dict of label : list of (gene id, score) pairs for all genes,
