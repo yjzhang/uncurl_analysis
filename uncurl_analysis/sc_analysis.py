@@ -691,11 +691,13 @@ class SCAnalysis(object):
                 t = time.time()
                 self.params['dim_red_option'] = self.params['dim_red_option'].lower()
                 m = self.m_full
+                # lmao this is overloaded in a way that makes zero sense
+                m = m/(m.sum(1, keepdims=True) + 1e-8)
                 if self.params['dim_red_option'] == 'umap' or self.params['dim_red_option'] == 'tsne':
                     from umap import UMAP
                     um = UMAP(metric='cosine')
                     self._gene_dim_red = um.fit_transform(m).T
-                #if self.params['dim_red_option'] == 'tsne':
+                #elif self.params['dim_red_option'] == 'tsne':
                 #    tsne = TSNE(2)
                 #    self._gene_dim_red = tsne.fit_transform(m).T
                 elif self.params['dim_red_option'] == 'tsvd' or self.params['dim_red_option'] == 'pca' or self.params['dim_red_option'] == 'mds':
@@ -714,7 +716,8 @@ class SCAnalysis(object):
                 self._gene_clusters = np.loadtxt(self.gene_clusters_f)
             else:
                 n_clusters = self.params['clusters']
-                data = self.m_full
+                m = self.m_full
+                data = m/(m.sum(1, keepdims=True) + 1e-8)
                 if 'clustering_method' in self.params and self.params['clustering_method'] == 'louvain':
                     from .clustering_methods import create_graph, run_louvain
                     graph = create_graph(data, n_neighbors=20, metric='cosine')
@@ -730,12 +733,16 @@ class SCAnalysis(object):
                     labels = baseline_cluster(data)
                     self._gene_clusters = np.array(labels)
                 else:
-                    # run k-means clustering on m_full
-                    from sklearn.cluster import KMeans
-                    km = KMeans(n_clusters)
-                    km.fit(data)
-                    labels = km.labels_
+                    from .clustering_methods import create_graph, run_leiden
+                    graph = create_graph(data, n_neighbors=20, metric='cosine')
+                    labels = run_leiden(graph)
                     self._gene_clusters = np.array(labels)
+                    # run k-means clustering on m_full
+                    #from sklearn.cluster import KMeans
+                    #km = KMeans(n_clusters)
+                    #km.fit(data)
+                    #labels = km.labels_
+                    #self._gene_clusters = np.array(labels)
                 np.savetxt(self.gene_clusters_f, self._gene_clusters, fmt='%d')
                 self.has_gene_clusters = True
         return self._gene_clusters
