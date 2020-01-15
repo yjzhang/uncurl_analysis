@@ -691,19 +691,16 @@ class SCAnalysis(object):
                 t = time.time()
                 self.params['dim_red_option'] = self.params['dim_red_option'].lower()
                 m = self.m_full
-                if self.params['dim_red_option'] == 'tsne':
-                    tsne = TSNE(2)
-                    self._gene_dim_red = tsne.fit_transform(m).T
-                elif self.params['dim_red_option'] == 'pca':
-                    pca = PCA(2)
-                    self._gene_dim_red = pca.fit_transform(m).T
-                elif self.params['dim_red_option'] == 'tsvd':
-                    tsvd = TruncatedSVD(2)
-                    self._gene_dim_red = tsvd.fit_transform(m).T
-                elif self.params['dim_red_option'] == 'umap':
+                if self.params['dim_red_option'] == 'umap' or self.params['dim_red_option'] == 'tsne':
                     from umap import UMAP
                     um = UMAP(metric='cosine')
                     self._gene_dim_red = um.fit_transform(m).T
+                #if self.params['dim_red_option'] == 'tsne':
+                #    tsne = TSNE(2)
+                #    self._gene_dim_red = tsne.fit_transform(m).T
+                elif self.params['dim_red_option'] == 'tsvd' or self.params['dim_red_option'] == 'pca' or self.params['dim_red_option'] == 'mds':
+                    tsvd = TruncatedSVD(2)
+                    self._gene_dim_red = tsvd.fit_transform(m).T
                 np.savetxt(self.gene_dim_red_f, self._gene_dim_red)
                 self.has_gene_dim_red = True
                 self.profiling['gene_dim_red'] = time.time() - t
@@ -737,7 +734,7 @@ class SCAnalysis(object):
                     from sklearn.cluster import KMeans
                     km = KMeans(n_clusters)
                     km.fit(data)
-                    labels = km._labels
+                    labels = km.labels_
                     self._gene_clusters = np.array(labels)
                 np.savetxt(self.gene_clusters_f, self._gene_clusters, fmt='%d')
                 self.has_gene_clusters = True
@@ -1281,6 +1278,8 @@ class SCAnalysis(object):
         self.entropy
         self.separation_scores
         self.data_sampled_all_genes
+        self.gene_dim_red
+        self.gene_clusters
 
     def run_post_analysis(self):
         """
@@ -1328,6 +1327,10 @@ class SCAnalysis(object):
         self.has_separation_scores = False
         self._separation_scores = None
         self.separation_scores
+        if self.has_m_full:
+            self.has_m_full = False
+            self._m_full = None
+            self.m_full
         self.has_gene_dim_red = False
         self._gene_dim_red = None
         self.gene_dim_red

@@ -130,6 +130,7 @@ class SCAnalysisTest(TestCase):
                 clusters=8,
                 data_filename='data.mtx',
                 baseline_dim_red='tsvd',
+                dim_red_option='umap',
                 cell_frac=0.5,
                 max_iters=20,
                 inner_max_iters=20)
@@ -141,6 +142,7 @@ class SCAnalysisTest(TestCase):
         sca = sca.load_params_from_folder()
         self.assertEqual(sca.params['clusters'], 8)
         self.assertEqual(sca.params['baseline_dim_red'], 'tsvd')
+        self.assertEqual(sca.params['dim_red_option'], 'umap')
         self.assertEqual(sca.params['cell_frac'], 0.5)
         self.assertEqual(sca.params['genes_frac'], 0.2)
         self.assertEqual(sca.uncurl_kwargs['max_iters'], 20)
