@@ -619,7 +619,11 @@ class SCAnalysis(object):
                 if baseline_dim_red == 'none':
                     return self.dim_red
                 else:
+                    # TODO: should we normalize data?
                     data_sampled = self.data_sampled
+                    if self.params['normalize']:
+                        from uncurl.preprocessing import cell_normalize
+                        data_sampled = cell_normalize(data_sampled)
                     tsvd = TruncatedSVD(50)
                     data_log_norm = uncurl.preprocessing.log1p(data_sampled)
                     if baseline_dim_red == 'tsne':
