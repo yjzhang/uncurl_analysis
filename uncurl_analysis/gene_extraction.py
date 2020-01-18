@@ -78,7 +78,7 @@ def find_overexpressed_genes_weighted(data, w, eps=0):
             eps)
     return scores
 
-def pairwise_t(data, w_or_labels, eps=1.0, calc_pvals=True):
+def pairwise_t(data, w_or_labels, eps=1.0, calc_pvals=True, normalize=False):
     """
     Computes pairwise t-test between all pairs of clusters and all genes.
 
@@ -88,6 +88,9 @@ def pairwise_t(data, w_or_labels, eps=1.0, calc_pvals=True):
         ratios, pvals - two arrays of shape (k, k, genes), where k is the number of clusters.
     """
     data_csc = sparse.csc_matrix(data)
+    if normalize:
+        from uncurl.preprocessing import cell_normalize
+        data_csc = cell_normalize(data_csc)
     genes, cells = data.shape
     if len(w_or_labels.shape) == 2:
         scores, pvals = csc_weighted_t_test(
@@ -119,7 +122,7 @@ def pairwise_t(data, w_or_labels, eps=1.0, calc_pvals=True):
         # TODO: re-map keys? or would that mess up the c-score calculation?
     return scores, pvals
 
-def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True, test='t'):
+def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True, test='t', normalize=False):
     """
     Computes 1-vs-rest t-test for all clusters and genes.
 
@@ -130,6 +133,9 @@ def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True, test='t'):
     and 'u' is the Mann-Whitney U test.
     """
     data_csc = sparse.csc_matrix(data)
+    if normalize:
+        from uncurl.preprocessing import cell_normalize
+        data_csc = cell_normalize(data_csc)
     genes, cells = data.shape
     if cells != len(labels):
         raise Exception('length of data not equal to length of labels')

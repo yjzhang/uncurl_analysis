@@ -715,7 +715,6 @@ class SCAnalysis(object):
             if self.has_gene_clusters:
                 self._gene_clusters = np.loadtxt(self.gene_clusters_f)
             else:
-                n_clusters = self.params['clusters']
                 m = self.m_full
                 data = m/(m.sum(1, keepdims=True) + 1e-8)
                 if 'clustering_method' in self.params and self.params['clustering_method'] == 'louvain':
@@ -733,16 +732,11 @@ class SCAnalysis(object):
                     labels = baseline_cluster(data)
                     self._gene_clusters = np.array(labels)
                 else:
+                    # cluster using Leiden by default
                     from .clustering_methods import create_graph, run_leiden
                     graph = create_graph(data, n_neighbors=20, metric='cosine')
                     labels = run_leiden(graph)
                     self._gene_clusters = np.array(labels)
-                    # run k-means clustering on m_full
-                    #from sklearn.cluster import KMeans
-                    #km = KMeans(n_clusters)
-                    #km.fit(data)
-                    #labels = km.labels_
-                    #self._gene_clusters = np.array(labels)
                 np.savetxt(self.gene_clusters_f, self._gene_clusters, fmt='%d')
                 self.has_gene_clusters = True
         return self._gene_clusters
@@ -761,7 +755,8 @@ class SCAnalysis(object):
                 # TODO: have some option for eps?
                 self._t_scores, self._t_pvals = gene_extraction.pairwise_t(
                         data, labels,
-                        eps=float(5*len(set(labels)))/data.shape[1])
+                        eps=float(5*len(set(labels)))/data.shape[1],
+                        normalize=self.params['normalize'])
                 dense_matrix_h5.store_array(self.t_scores_f, self._t_scores)
                 dense_matrix_h5.store_array(self.t_pvals_f, self._t_pvals)
                 self.has_t_scores = True
@@ -810,7 +805,8 @@ class SCAnalysis(object):
                 self._top_genes_1_vs_rest, self._pvals_1_vs_rest = gene_extraction.one_vs_rest_t(
                         data, labels,
                         eps=float(5*len(set(labels)))/data.shape[1],
-                        test=self.params['one_vs_all_test'])
+                        test=self.params['one_vs_all_test'],
+                        normalize=self.params['normalize'])
                 with open(self.top_genes_1_vs_rest_f, 'w') as f:
                     json.dump(self._top_genes_1_vs_rest, f,
                             cls=SimpleEncoder)
@@ -1144,13 +1140,15 @@ class SCAnalysis(object):
         if mode == '1_vs_rest':
             scores, pvals = gene_extraction.one_vs_rest_t(data, color_track,
                         eps=eps,
-                        calc_pvals=calc_pvals, test='t')
+                        calc_pvals=calc_pvals, test='t',
+                        normalize=self.params['normalize'])
             dense_matrix_h5.store_dict(scores_filename, scores)
             dense_matrix_h5.store_dict(pvals_filename, pvals)
         elif mode == 'pairwise':
             scores, pvals = gene_extraction.pairwise_t(data, color_track,
                         eps=eps,
-                        calc_pvals=calc_pvals)
+                        calc_pvals=calc_pvals,
+                        normalize=self.params['normalize'])
             dense_matrix_h5.store_array(scores_filename, scores)
             dense_matrix_h5.store_array(pvals_filename, pvals)
         result = self.color_tracks[color_track_name]
@@ -1391,8 +1389,6 @@ class SCAnalysis(object):
         if os.path.exists(os.path.join(self.data_dir, 'params.json')):
             with open(os.path.join(self.data_dir, 'params.json')) as f:
                 params = json.load(f)
-                if 'normalize' in params or 'normalize_data' in params:
-                    self.params['normalize'] = True
                 updated_params = {}
                 # convert params that should be numbers into numbers
                 for k, p in params.items():
