@@ -27,7 +27,8 @@ install_requires = [
         'tables',
         'pandas',
         'python-igraph',
-        'leidenalg'
+        'leidenalg',
+        'statsmodels'
 ]
 
 setup(
