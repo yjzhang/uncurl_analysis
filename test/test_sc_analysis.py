@@ -96,9 +96,10 @@ class SCAnalysisTest(TestCase):
                 clusters=8,
                 frac=0.2,
                 data_filename='data.mtx',
-                baseline_dim_red='tsvd',
-                dim_red_option='MDS',
+                baseline_dim_red='umap',
+                dim_red_option='umap',
                 normalize=True,
+                use_fdr=True,
                 min_reads=10,
                 max_reads=4000,
                 cell_frac=0.5,
@@ -131,9 +132,11 @@ class SCAnalysisTest(TestCase):
                 data_filename='data.mtx',
                 baseline_dim_red='tsvd',
                 dim_red_option='umap',
+                normalize=1,
                 cell_frac=0.5,
                 max_iters=20,
-                inner_max_iters=20)
+                inner_max_iters=20,
+                use_fdr=1)
         sca.run_full_analysis()
         sca.save_json_reset()
         # delete the whole sca, re-load it from json
@@ -145,6 +148,8 @@ class SCAnalysisTest(TestCase):
         self.assertEqual(sca.params['dim_red_option'], 'umap')
         self.assertEqual(sca.params['cell_frac'], 0.5)
         self.assertEqual(sca.params['genes_frac'], 0.2)
+        self.assertTrue(sca.params['normalize'])
+        self.assertTrue(sca.params['use_fdr'])
         self.assertEqual(sca.uncurl_kwargs['max_iters'], 20)
         self.assertTrue(sca.has_dim_red)
         self.assertTrue(sca.has_w)

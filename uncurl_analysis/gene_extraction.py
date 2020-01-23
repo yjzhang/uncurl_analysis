@@ -6,7 +6,6 @@ from scipy import sparse
 
 from uncurl_analysis.sparse_gene_extraction import csc_c_scores, csc_weighted_c_scores, csc_weighted_t_test, csc_unweighted_t_test, t_test_c_scores, t_test_separation_scores, csc_unweighted_1_vs_rest_t_test, csc_unweighted_1_vs_rest_rank_sum_test
 
-# TODO: try normalizing by cell total read count
 
 def find_overexpressed_genes(data, labels, eps=0):
     """
@@ -78,7 +77,7 @@ def find_overexpressed_genes_weighted(data, w, eps=0):
             eps)
     return scores
 
-def pairwise_t(data, w_or_labels, eps=1.0, calc_pvals=True, normalize=False):
+def pairwise_t(data, w_or_labels, eps=1.0, calc_pvals=True, normalize=False, use_fdr=False):
     """
     Computes pairwise t-test between all pairs of clusters and all genes.
 
@@ -120,9 +119,16 @@ def pairwise_t(data, w_or_labels, eps=1.0, calc_pvals=True, normalize=False):
                 eps,
                 calc_pvals)
         # TODO: re-map keys? or would that mess up the c-score calculation?
+    if use_fdr:
+        from statsmodels.stats.multitest import fdrcorrection
+        new_pvals = np.zeros(pvals.shape)
+        for k1 in range(pvals.shape[0]):
+            for k2 in range(pvals.shape[1]):
+                new_pvals[k1, k2, :] = fdrcorrection(pvals[k1, k2, :])[1]
+        pvals = new_pvals
     return scores, pvals
 
-def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True, test='t', normalize=False):
+def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True, test='t', normalize=False, use_fdr=False):
     """
     Computes 1-vs-rest t-test for all clusters and genes.
 
@@ -131,6 +137,10 @@ def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True, test='t', normalize=Fa
     test is either 't' or 'u'.
     't' indicates that the 2-sample t-test will be used,
     and 'u' is the Mann-Whitney U test.
+
+    Returns:
+        scores (dict): map of labels to tuples (array of gene ids, array of ratios) sorted by descending ratio
+        pvals (dict): map of labels to tuples (array of gene ids, array of pvals) sorted by ascending pval
     """
     data_csc = sparse.csc_matrix(data)
     if normalize:
@@ -165,6 +175,11 @@ def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True, test='t', normalize=Fa
     for i, l in labels_map.items():
         new_scores[i] = scores[l]
         new_pvals[i] = pvals[l]
+    if use_fdr:
+        from statsmodels.stats.multitest import fdrcorrection
+        for k, v in new_pvals.items():
+            pv = v[1]
+            v[1] = fdrcorrection(pv)
     return new_scores, new_pvals
 
 

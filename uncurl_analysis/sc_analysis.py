@@ -53,6 +53,7 @@ class SCAnalysis(object):
             baseline_dim_red=None,
             clustering_method='argmax',
             one_vs_all_test='t',
+            use_fdr=False,
             **uncurl_kwargs):
         """
         Args:
@@ -75,6 +76,7 @@ class SCAnalysis(object):
         self.params['baseline_dim_red'] = baseline_dim_red
         self.params['clustering_method'] = clustering_method.lower()
         self.params['one_vs_all_test'] = one_vs_all_test
+        self.params['use_fdr'] = bool(use_fdr)
 
         self.uncurl_kwargs = uncurl_kwargs
 
@@ -760,7 +762,8 @@ class SCAnalysis(object):
                 self._t_scores, self._t_pvals = gene_extraction.pairwise_t(
                         data, labels,
                         eps=float(5*len(set(labels)))/data.shape[1],
-                        normalize=self.params['normalize'])
+                        normalize=self.params['normalize'],
+                        use_fdr=self.params['use_fdr'])
                 dense_matrix_h5.store_array(self.t_scores_f, self._t_scores)
                 dense_matrix_h5.store_array(self.t_pvals_f, self._t_pvals)
                 self.has_t_scores = True
@@ -810,7 +813,8 @@ class SCAnalysis(object):
                         data, labels,
                         eps=float(5*len(set(labels)))/data.shape[1],
                         test=self.params['one_vs_all_test'],
-                        normalize=self.params['normalize'])
+                        normalize=self.params['normalize'],
+                        use_fdr=self.params['use_fdr'])
                 with open(self.top_genes_1_vs_rest_f, 'w') as f:
                     json.dump(self._top_genes_1_vs_rest, f,
                             cls=SimpleEncoder)
@@ -1145,14 +1149,16 @@ class SCAnalysis(object):
             scores, pvals = gene_extraction.one_vs_rest_t(data, color_track,
                         eps=eps,
                         calc_pvals=calc_pvals, test='t',
-                        normalize=self.params['normalize'])
+                        normalize=self.params['normalize'],
+                        use_fdr=self.params['use_fdr'])
             dense_matrix_h5.store_dict(scores_filename, scores)
             dense_matrix_h5.store_dict(pvals_filename, pvals)
         elif mode == 'pairwise':
             scores, pvals = gene_extraction.pairwise_t(data, color_track,
                         eps=eps,
                         calc_pvals=calc_pvals,
-                        normalize=self.params['normalize'])
+                        normalize=self.params['normalize'],
+                        use_fdr=self.params['use_fdr'])
             dense_matrix_h5.store_array(scores_filename, scores)
             dense_matrix_h5.store_array(pvals_filename, pvals)
         result = self.color_tracks[color_track_name]
