@@ -179,7 +179,7 @@ def one_vs_rest_t(data, labels, eps=1.0, calc_pvals=True, test='t', normalize=Fa
         from statsmodels.stats.multitest import fdrcorrection
         for k, v in new_pvals.items():
             pv = v[1]
-            v[1] = fdrcorrection(pv)
+            v[1] = fdrcorrection(pv)[1]
     return new_scores, new_pvals
 
 
