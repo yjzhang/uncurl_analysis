@@ -255,7 +255,7 @@ class SCAnalysis(object):
             self.data_f = str(self.data_f)
             print('loading data:', self.data_f)
             try:
-                if self.params['is_sparse']:
+                if self.params['is_sparse'] or self.data_f.endswith('.mtx') or self.data_f.endswith('.mtx.gz'):
                     self._data = scipy.io.mmread(self.data_f)
                     self._data = sparse.csc_matrix(self._data)
                 else:
