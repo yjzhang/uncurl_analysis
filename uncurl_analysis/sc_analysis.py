@@ -551,7 +551,7 @@ class SCAnalysis(object):
         Cell sample (after applying data subset) - based on uniform
         simplex sampling on W.
         """
-        if self._cell_sample is None and self.params['cell_frac'] >= 1:
+        if self._cell_sample is None and self.params['cell_frac'] >= 1 and not os.path.exists(self.cell_sample_f):
             self._cell_sample = np.arange(sum(self.cell_subset))
         else:
             if self._cell_sample is None:
