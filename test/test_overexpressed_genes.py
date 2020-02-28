@@ -148,7 +148,7 @@ class OverexpressedGenesTest(TestCase):
         from uncurl import simulation
         data, clusters = simulation.generate_poisson_data(np.array([[1.0, 10.0], [10.0, 1.0], [0.5, 0.5]]), 100)
         data_csc = sparse.csc_matrix(data)
-        ratios, pvals = pairwise_t(data_csc, clusters, eps=1e-8, normalize=True, use_fdr=True)
+        ratios, pvals = pairwise_t(data_csc, clusters, eps=1e-8, normalize=False, use_fdr=True)
         print(ratios)
         print(data[1, clusters==0].mean()/data[1, clusters==1].mean())
         print(pvals)
@@ -177,7 +177,7 @@ class OverexpressedGenesTest(TestCase):
         from uncurl import simulation
         data, clusters = simulation.generate_poisson_data(np.array([[0.5, 4.0, 3.0], [10.0, 1.0, 1.0], [0.5, 0.5, 0.5]]), 100)
         data_csc = sparse.csc_matrix(data)
-        ratios, pvals = one_vs_rest_t(data_csc, clusters, eps=1e-8, test='t', normalize=True, use_fdr=True)
+        ratios, pvals = one_vs_rest_t(data_csc, clusters, eps=1e-8, test='t', normalize=False, use_fdr=True)
         print(ratios)
         print(data[1, clusters==0].mean()/data[1, clusters==1].mean())
         print(pvals)
