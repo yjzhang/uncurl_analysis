@@ -1445,7 +1445,7 @@ class SCAnalysis(object):
                     if val is None and self.__dict__[key] is not None:
                         del p2[key]
                     # ugh we want to use params.json, not the params in sc_analysis.json
-                    if isinstance(key, str) and key == 'params':
+                    if isinstance(key, str) and key == 'params' and os.path.exists(os.path.join(self.data_dir, 'params.json')):
                         del p2[key]
                 self.__dict__.update(p2)
                 if 'profiling' not in p:
