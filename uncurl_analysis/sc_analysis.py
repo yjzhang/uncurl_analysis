@@ -1031,7 +1031,7 @@ class SCAnalysis(object):
             self.custom_selections[color_track_name].labels = labels
         custom_cell_selection.save_json(self.custom_selections_f, self.custom_selections)
 
-    def update_custom_color_track_label(self, color_track_name, label_name, label_criteria=None):
+    def update_custom_color_track_label(self, color_track_name, label_name, label_criteria=None, color=None):
         """
         Re-writes the color track info with the new color track info...
         """
@@ -1042,11 +1042,13 @@ class SCAnalysis(object):
                 has_updated_label = True
                 if label_criteria is not None:
                     label.criteria = label_criteria
+                if color is not None and color != '#000000':
+                    label.color = color
         # this is kind of a hack...
         if has_updated_label and label_criteria is None:
             return
         if not has_updated_label:
-            new_label = custom_cell_selection.CustomLabel(label_name, label_criteria)
+            new_label = custom_cell_selection.CustomLabel(label_name, label_criteria, color=color)
             color_track.labels.append(new_label)
         if color_track_name in self.color_tracks:
             results = self.color_tracks[color_track_name]
@@ -1059,20 +1061,16 @@ class SCAnalysis(object):
                         cls=SimpleEncoder)
         custom_cell_selection.save_json(self.custom_selections_f, self._custom_selections)
 
-    def get_color_track(self, color_track_name):
+    def get_color_track(self, color_track_name, return_colors=False):
         """
         Returns a tuple for a given color track name: data, is_discrete, where
         data is a 1d array, and is_discrete is a boolean.
         """
-        if not hasattr(self, 'color_tracks_cache'):
-            self.color_tracks_cache = {}
-        try:
-            data, is_discrete = self.color_tracks_cache[color_track_name]
-            return data, is_discrete
-        except:
-            pass
         if color_track_name in self.custom_selections:
             colormap = self.custom_selections[color_track_name]
+            if return_colors:
+                colors = colormap.get_colors()
+                return colormap.label_cells(self), True, colors
             return colormap.label_cells(self), True
         elif color_track_name in self.color_tracks:
             if not isinstance(self.color_tracks[color_track_name], dict):
@@ -1087,7 +1085,8 @@ class SCAnalysis(object):
                 data = np.load(filename)
             if len(data) > len(self.cell_sample):
                 data = data[self.cell_subset][self.cell_sample]
-            self.color_tracks_cache[color_track_name] = (data, is_discrete)
+            if return_colors:
+                return data, is_discrete, None
             return data, is_discrete
         else:
             return None

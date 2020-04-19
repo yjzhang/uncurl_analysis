@@ -70,7 +70,7 @@ class CustomLabel(object):
     this class represents a single label
     """
 
-    def __init__(self, name, criteria=None):
+    def __init__(self, name, criteria=None, color=None):
         """
         Args:
             name (str)
@@ -81,6 +81,7 @@ class CustomLabel(object):
             self.criteria = []
         else:
             self.criteria = criteria
+        self.color = color
 
     def select_cells(self, sca):
         """
@@ -128,6 +129,19 @@ class CustomColorMap(object):
         cell_labels[cell_labels==None] = 'default'
         cell_labels = cell_labels.astype(str)
         return cell_labels
+
+    def get_colors(self):
+        """
+        Returns a dict of label names to colors
+        'default' will not be in the dict. colors can be rgb strings or None.
+        """
+        color_labels = {}
+        for label in self.labels:
+            if hasattr(label, 'color'):
+                color_labels[label.name] = label.color
+            else:
+                color_labels[label.name] = None
+        return color_labels
 
 
 def load_json(json_filename):
