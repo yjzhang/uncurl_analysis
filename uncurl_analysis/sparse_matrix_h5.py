@@ -35,7 +35,7 @@ def store_matrix(lil_matrix, h5_filename):
                     filters=filters)
     for row in lil_matrix.rows:
         rows.append(row)
-    shape = matrix_file.create_array(matrix_file.root,
+    matrix_file.create_array(matrix_file.root,
                     'shape', obj=np.array(lil_matrix.shape), title='Matrix shape')
     matrix_file.close()
 
@@ -74,6 +74,7 @@ def load_matrix(h5_filename):
     shape = f.get_node('/shape').read()
     f.close()
     mat = sparse.lil_matrix((shape[0], shape[1]))
-    mat.rows = row
-    mat.data = data
+    # this is for compatibility with scipy 1.5
+    mat.rows = np.array([list(r) for r in row])
+    mat.data = np.array([list(d) for d in data])
     return mat
