@@ -54,6 +54,9 @@ class SCAnalysis(object):
             clustering_method='argmax',
             one_vs_all_test='t',
             use_fdr=False,
+            min_unique_genes=0,
+            max_unique_genes=1e10,
+            max_mt_frac=1.0,
             **uncurl_kwargs):
         """
         Args:
@@ -77,6 +80,9 @@ class SCAnalysis(object):
         self.params['clustering_method'] = clustering_method.lower()
         self.params['one_vs_all_test'] = one_vs_all_test
         self.params['use_fdr'] = bool(use_fdr)
+        self.params['min_unique_genes'] = int(min_unique_genes)
+        self.params['max_unique_genes'] = int(max_unique_genes)
+        self.params['max_mt_frac'] = float(max_mt_frac)
 
         self.uncurl_kwargs = uncurl_kwargs
 
@@ -324,10 +330,26 @@ class SCAnalysis(object):
         """
         if self._cell_subset is None:
             if not self.has_cell_subset:
+                print('determining cell_subset')
                 t = time.time()
                 read_counts = self.read_counts
                 print('min_reads:', self.params['min_reads'], 'max_reads:', self.params['max_reads'])
                 self._cell_subset = (read_counts >= self.params['min_reads']) & (read_counts <= self.params['max_reads'])
+                if sparse.issparse(self.data):
+                    unique_genes = self.data.getnnz(0)
+                else:
+                    unique_genes = np.count_nonzero(self.data, 0)
+                print('min_unique_genes:', self.params['min_unique_genes'], 'max_unique_genes:', self.params['max_unique_genes'])
+                self._cell_subset = self._cell_subset & (unique_genes >= self.params['min_unique_genes']) & (unique_genes <= self.params['max_unique_genes'])
+                print('max_mt_frac:', self.params['max_mt_frac'])
+                # filter by mt genes
+                if self.params['max_mt_frac'] < 1:
+                    mt_genes = map(lambda x: x.startswith('Mt-') or x.startswith('MT-'), self.gene_names)
+                    mt_genes = np.array(list(mt_genes))
+                    if len(mt_genes) > 0:
+                        mt_gene_counts = np.array(self.data[mt_genes, :].sum(0)).flatten()
+                        mt_gene_frac = mt_gene_counts/read_counts
+                        self._cell_subset = self._cell_subset & (mt_gene_frac <= self.params['max_mt_frac'])
                 np.savetxt(self.cell_subset_f, self._cell_subset, fmt='%d')
                 self.has_cell_subset = True
                 self.profiling['cell_subset'] = time.time() - t

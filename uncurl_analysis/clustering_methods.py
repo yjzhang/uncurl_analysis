@@ -2,7 +2,6 @@
 
 import igraph as ig
 import numpy as np
-from sklearn.cluster import KMeans
 from sklearn.decomposition import TruncatedSVD
 import umap
 
@@ -22,7 +21,7 @@ def create_graph(data, n_neighbors=20, metric='euclidean', **params):
     edge_weights = []
     for i in range(data.shape[0]):
         nns = knn_indices[i, 1:]
-        weight = 1.0/knn_dists[i, 1:]
+        weight = 1.0/(knn_dists[i, 1:] + 1e-10)
         edges += [(i, n) for n in nns]
         edge_weights += list(weight)
     # add edges
