@@ -344,7 +344,7 @@ class SCAnalysis(object):
                 print('max_mt_frac:', self.params['max_mt_frac'])
                 # filter by mt genes
                 if self.params['max_mt_frac'] < 1:
-                    mt_genes = map(lambda x: x.startswith('Mt-') or x.startswith('MT-'), self.gene_names)
+                    mt_genes = map(lambda x: x.startswith('Mt-') or x.startswith('MT-') or x.startswith('mt-'), self.gene_names)
                     mt_genes = np.array(list(mt_genes))
                     if len(mt_genes) > 0:
                         mt_gene_counts = np.array(self.data[mt_genes, :].sum(0)).flatten()
