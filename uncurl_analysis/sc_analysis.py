@@ -230,7 +230,6 @@ class SCAnalysis(object):
         self._custom_selections = None
 
         # dimensionality reduction of genes
-        # TODO
         self.gene_dim_red_f = os.path.join(data_dir, 'gene_dim_red.txt')
         self.has_gene_dim_red = os.path.exists(self.gene_dim_red_f)
         self._gene_dim_red = None
@@ -494,6 +493,7 @@ class SCAnalysis(object):
                 m = self.m
                 w = self.w
                 # data contains cell subset, but not gene subset
+                # TODO: this doesn't work for non-poisson dist
                 data = self.data[:, self.cell_subset]
                 selected_genes = self.gene_subset
                 self._m_full = uncurl.update_m(data, m, w, selected_genes,
