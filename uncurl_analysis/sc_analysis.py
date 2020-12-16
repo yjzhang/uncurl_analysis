@@ -493,7 +493,7 @@ class SCAnalysis(object):
                 m = self.m
                 w = self.w
                 # data contains cell subset, but not gene subset
-                # TODO: this doesn't work for non-poisson dist
+                # TODO: this doesn't work for non-poisson distributions? Or does it?
                 data = self.data[:, self.cell_subset]
                 selected_genes = self.gene_subset
                 self._m_full = uncurl.update_m(data, m, w, selected_genes,
