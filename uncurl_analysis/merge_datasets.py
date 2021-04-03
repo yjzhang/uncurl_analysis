@@ -4,7 +4,8 @@ import numpy as np
 from scipy import sparse
 import scipy.io
 
-def merge_files(data_paths, gene_paths, dataset_names, output_path):
+def merge_files(data_paths, gene_paths, dataset_names, output_path,
+        keep_genes=True):
     """
     Merges multiple files into a single file...
 
@@ -13,6 +14,7 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path):
         gene_paths (list of paths to gene txt files)
         dataset_names (names of each dataset)
         output_path (directory to write to)
+        keep_genes (bool): whether or not to include genes that only occur in some data files (values will be set to zero).
 
     This saves an output file as 'data.mtx.gz' in output_path, and a genes file as 'gene_names.txt',
     and returns two files: a sparse
@@ -41,9 +43,11 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path):
             data = np.loadtxt(data_path)
         data_array += [dataset_name]*data.shape[1]
         all_genes.append(genes)
-        genes_set.update(genes)
+        if keep_genes or len(genes_set) == 0:
+            genes_set.update(genes)
+        else:
+            genes_set = genes_set.intersection(genes)
         all_data.append(data)
-    # TODO: save data_array?
     np.savetxt(os.path.join(output_path, 'samples.txt'), data_array, fmt='%s')
     # combine gene lists
     # decide whether any of the genes are different
@@ -74,6 +78,7 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path):
         combined_genes = np.array(list(genes_set))
         modified_matrices = []
         # do the mapping...
+        # TODO: add an option to remove genes that only occur in one file
         for genes, data in zip(all_genes, all_data):
             data = sparse.csr_matrix(data)
             # use bmat - concatenate by rows
@@ -86,7 +91,10 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path):
             sub_blocks = []
             for gene in combined_genes:
                 if gene not in gene_to_index:
-                    sub_blocks.append([sparse.csr_matrix(np.zeros(data.shape[1]))])
+                    if keep_genes:
+                        sub_blocks.append([sparse.csr_matrix(np.zeros(data.shape[1]))])
+                    else:
+                        continue
                 else:
                     sub_blocks.append([data[gene_to_index[gene], :]])
                     #sub_blocks.append([data[gene_to_index[gene], :].max(0)])

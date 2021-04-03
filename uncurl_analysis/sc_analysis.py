@@ -242,12 +242,47 @@ class SCAnalysis(object):
         self.has_gene_clusters = os.path.exists(self.gene_clusters_f)
         self._gene_clusters = None
 
+        # TODO: action log
+        self.log_f = os.path.join(data_dir, 'log.txt')
+        self.has_log = os.path.exists(self.log_f)
+        self._log = None
+
         # dict of output_name : running time
         self.profiling = {}
 
         self.json_f = os.path.join(data_dir, 'sc_analysis.json')
 
+    
+    @property
+    def log(self):
+        """
+        Log is a list of tuples of strings. We only log operations that change the dataset - merge, split, recluster, creation of new colormap, change of colormap, etc.
+        Format: (operation, *params)
+        """
+        self.log_f = str(self.log_f)
+        self._log = []
+        if not os.path.exists(self.log_f):
+            pass
+        else:
+            with open(self.log_f) as f:
+                data = f.readlines()
+            for l in data:
+                l = (x.strip() for x in l.split(','))
+                self._log.append(l)
+        return self._log
 
+    def write_log_entry(self, action, params):
+        """
+        Params:
+            action (str): one of merge, split,
+            params:
+        """
+        # TODO
+        # TODO for logging: if we change a file, should we save a backup of the old file? or save a diff? yes... so we can revert.
+        entry = '{0}: {1}\n'.format(action, params)
+        with open(self.log_f, 'a') as f:
+            f.write(entry)
+        pass
 
     @property
     def data(self):
@@ -1221,6 +1256,7 @@ class SCAnalysis(object):
         Runs split, merge, or new cluster. Updates m and w.
 
         clusters_to_change can be a list of either cluster ids or cell ids.
+        split_or_merge is one of 'split', 'merge', 'new', or 'delete'
         """
         data_sampled = self.data_sampled
         if 'init_means' in self.uncurl_kwargs:
