@@ -5,7 +5,7 @@ from scipy import sparse
 import scipy.io
 
 def merge_files(data_paths, gene_paths, dataset_names, output_path,
-        keep_genes=True):
+        keep_genes=True, use_batch_correction=False):
     """
     Merges multiple files into a single file...
 
@@ -15,6 +15,7 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path,
         dataset_names (names of each dataset)
         output_path (directory to write to)
         keep_genes (bool): whether or not to include genes that only occur in some data files (values will be set to zero).
+        use_batch_correction (bool): whether or not to use batch effect correction (with the MNN method)
 
     This saves an output file as 'data.mtx.gz' in output_path, and a genes file as 'gene_names.txt',
     and returns two files: a sparse
@@ -22,7 +23,6 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path,
     It also deletes all the temporary files.
     """
     if len(data_paths) == 1 and len(gene_paths) == 1:
-        # TODO: copy files into the correct name
         data_output_path = data_paths[0].replace('_1', '')
         os.rename(data_paths[0], data_output_path)
         if gene_paths[0] is not None:
@@ -49,6 +49,9 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path,
             genes_set = genes_set.intersection(genes)
         all_data.append(data)
     np.savetxt(os.path.join(output_path, 'samples.txt'), data_array, fmt='%s')
+    if use_batch_correction:
+        # TODO: use batch effect correction
+        pass
     # combine gene lists
     # decide whether any of the genes are different
     all_genes_same = True

@@ -74,5 +74,9 @@ class MergeTest(unittest.TestCase):
         #print((self.data - data).__abs__())
         #self.assertTrue((self.data - data).__abs__().sum() < 0.00001)
 
+    def test_batch_correction(self):
+        # 1. load all datasets
+        pass
+
 if __name__ == '__main__':
     unittest.main()
