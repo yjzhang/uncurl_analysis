@@ -73,6 +73,57 @@ def csc_weighted_cluster_means(np.ndarray[numeric, ndim=1] data,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
+def csc_global_mean_vars(np.ndarray[numeric, ndim=1] data,
+        np.ndarray[int2, ndim=1] indices,
+        np.ndarray[int2, ndim=1] indptr,
+        Py_ssize_t cells,
+        Py_ssize_t genes,
+        double eps=1e-10):
+    """
+    Returns two 1d arrays for gene means and gene variances.
+    """
+    cdef numeric[:] data_ = data
+    cdef int2[:] indices_ = indices
+    cdef int2[:] indptr_ = indptr
+    cdef int2 g, c, start_ind, end_ind, i2
+    #print(W.shape[0], W.shape[1])
+    #print(cells)
+    #print(genes)
+    cdef double[:] means = np.zeros(genes)
+    cdef double[:] varis = np.zeros(genes)
+    for c in range(cells):
+        start_ind = indptr_[c]
+        end_ind = indptr_[c+1]
+        for i2 in range(start_ind, end_ind):
+            g = indices_[i2]
+            means[g] += data_[i2]
+            varis[g] += data_[i2]*data_[i2]
+    for g in range(genes):
+        means[g] = means[g]/cells
+        varis[g] = means[g]*means[g] - varis[g]/cells
+    return means, varis
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+def csc_single_cell_top_genes(np.ndarray[numeric, ndim=1] data,
+        np.ndarray[int2, ndim=1] indices,
+        np.ndarray[int2, ndim=1] indptr,
+        Py_ssize_t cells,
+        Py_ssize_t genes,
+        Py_ssize_t n_genes,
+        double eps=1e-10):
+    """
+    Returns c x n_genes array of top gene indices for each cell,
+    where the genes are the most differentially expressed.
+    """
+    # TODO
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
 def csc_unweighted_cluster_means(np.ndarray[numeric, ndim=1] data,
         np.ndarray[int2, ndim=1] indices,
         np.ndarray[int2, ndim=1] indptr,

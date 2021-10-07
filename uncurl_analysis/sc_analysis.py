@@ -274,15 +274,14 @@ class SCAnalysis(object):
     def write_log_entry(self, action, params):
         """
         Params:
-            action (str): one of merge, split,
-            params:
+            action (str): one of merge, split, or delete
+            params: the params as a dict of key: val
         """
         # TODO
         # TODO for logging: if we change a file, should we save a backup of the old file? or save a diff? yes... so we can revert.
         entry = '{0}: {1}\n'.format(action, params)
         with open(self.log_f, 'a') as f:
             f.write(entry)
-        pass
 
     @property
     def data(self):
