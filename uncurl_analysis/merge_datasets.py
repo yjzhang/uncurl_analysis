@@ -49,9 +49,7 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path,
             genes_set = genes_set.intersection(genes)
         all_data.append(data)
     np.savetxt(os.path.join(output_path, 'samples.txt'), data_array, fmt='%s')
-    if use_batch_correction:
-        # TODO: use batch effect correction
-        pass
+
     # combine gene lists
     # decide whether any of the genes are different
     all_genes_same = True
@@ -67,7 +65,12 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path,
         # combine matrices...
         # TODO: make sure that transposing the matrices is done before...
         # we assume that all input matrices are of shape (gene, cell)
-        output_matrix = sparse.hstack(all_data)
+        if use_batch_correction:
+            from .batch_correction import batch_correct_mnn
+            # TODO: use batch effect correction
+            output_matrix = batch_correct_mnn(all_data)
+        else:
+            output_matrix = sparse.hstack(all_data)
         # save output matrix as mtx.gz
         scipy.io.mmwrite(data_output_path, output_matrix)
         import subprocess
@@ -103,7 +106,11 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path,
                     #sub_blocks.append([data[gene_to_index[gene], :].max(0)])
             data_new = sparse.bmat(sub_blocks)
             modified_matrices.append(data_new)
-        output_matrix = sparse.hstack(modified_matrices)
+        if use_batch_correction:
+            from .batch_correction import batch_correct_mnn
+            output_matrix = batch_correct_mnn(modified_matrices)
+        else:
+            output_matrix = sparse.hstack(modified_matrices)
         scipy.io.mmwrite(data_output_path, output_matrix)
         import subprocess
         subprocess.call(['gzip', data_output_path])

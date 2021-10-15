@@ -18,15 +18,19 @@ class BatchCorrectionTest(unittest.TestCase):
         self.labs = dat['labels'].flatten()
 
     def testBatchCorrect1(self):
-        # TODO:
-        # 1. separate data into batches, randomly
         indices = list(range(self.data.shape[1]))
+        # 1. separate data into batches, randomly
         random.shuffle(indices)
         batch1 = indices[:200]
         batch2 = indices[200:]
         data1 = self.data[:, batch1]
         data2 = self.data[:, batch2]
+        # 2. test batch correction
+        print(data1.shape)
+        print(data2.shape)
         data_corrected = batch_correct_mnn([data1, data2])
+        self.assertTrue(data_corrected.shape[1] == self.data.shape[1])
+        self.assertTrue(data_corrected.shape[0] == self.data.shape[0])
 
 
 if __name__ == '__main__':
