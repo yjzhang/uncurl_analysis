@@ -271,17 +271,47 @@ class SCAnalysis(object):
                 self._log.append(l)
         return self._log
 
-    def write_log_entry(self, action, params):
+    def write_log_entry(self, action, save_m_w=True, params=None):
         """
         Params:
             action (str): one of merge, split, or delete
-            params: the params as a dict of key: val
         """
-        # TODO
-        # TODO for logging: if we change a file, should we save a backup of the old file? or save a diff? yes... so we can revert.
-        entry = '{0}: {1}\n'.format(action, params)
+        # TODO: timestamp?
+        import uuid
+        import shutil
+        id = str(uuid.uuid4())
+        if save_m_w:
+            w_filename = self.w_f + '_' + id
+            m_filename = self.m_f + '_' + id
+            shutil.copy(self.w_f, w_filename)
+            shutil.copy(self.m_f, m_filename)
+        entry = '{0}, {1}\n'.format(action, id)
+        if params is not None:
+            entry = '{0}, {1}\n'
+        self.log.append((action, id))
         with open(self.log_f, 'a') as f:
             f.write(entry)
+
+    def restore_prev(self, action_id):
+        """
+        Restores a previous log entry.
+        """
+        import shutil
+        # TODO
+        log_ids = [x[1] for x in self.log]
+        try:
+            id_index = log_ids.index(action_id)
+            w_filename = self.w_f + '_' + id
+            m_filename = self.m_f + '_' + id
+            shutil.copy(w_filename, self.w_f)
+            shutil.copy(m_filename, self.m_f)
+            self.run_post_analysis()
+            self.save_json_reset()
+            return 1
+        except:
+            print('Error: could not restore previous data')
+            return None
+        
 
     @property
     def data(self):
@@ -1257,6 +1287,7 @@ class SCAnalysis(object):
         clusters_to_change can be a list of either cluster ids or cell ids.
         split_or_merge is one of 'split', 'merge', 'new', or 'delete'
         """
+        # TODO: copy m and w
         data_sampled = self.data_sampled
         if 'init_means' in self.uncurl_kwargs:
             del self.uncurl_kwargs['init_means']
