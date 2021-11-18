@@ -267,7 +267,7 @@ class SCAnalysis(object):
             with open(self.log_f) as f:
                 data = f.readlines()
             for l in data:
-                l = (x.strip() for x in l.split(','))
+                l = (x.strip() for x in l.split('\t'))
                 self._log.append(l)
         return self._log
 
@@ -275,19 +275,26 @@ class SCAnalysis(object):
         """
         Params:
             action (str): one of merge, split, or delete
+
+        Log format: tab-separated lines -
+        <action>\t<id>\t<time>
+
+        Action format:
+        <Merge, split, delete, upload> <change
         """
         # TODO: timestamp?
+        import datetime
         import uuid
         import shutil
         id = str(uuid.uuid4())
+        dt = datetime.datetime.now()
         if save_m_w:
             w_filename = self.w_f + '_' + id
             m_filename = self.m_f + '_' + id
             shutil.copy(self.w_f, w_filename)
             shutil.copy(self.m_f, m_filename)
-        entry = '{0}, {1}\n'.format(action, id)
-        if params is not None:
-            entry = '{0}, {1}\n'
+        # TODO: change the format
+        entry = '{0}\t{1}\t{2}\n'.format(action, id, str(dt))
         self.log.append((action, id))
         with open(self.log_f, 'a') as f:
             f.write(entry)
@@ -297,7 +304,7 @@ class SCAnalysis(object):
         Restores a previous log entry.
         """
         import shutil
-        # TODO
+        # TODO: clear entries afterwards? Or not...
         log_ids = [x[1] for x in self.log]
         try:
             id_index = log_ids.index(action_id)
