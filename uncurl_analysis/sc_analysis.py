@@ -271,10 +271,11 @@ class SCAnalysis(object):
                 self._log.append(l)
         return self._log
 
-    def write_log_entry(self, action, save_m_w=True, params=None):
+    def write_log_entry(self, action, save_m_w=True):
         """
         Params:
-            action (str): one of merge, split, or delete
+            action (str): just a string describing the action. Could be anything.
+            save_m_w (bool):
 
         Log format: tab-separated lines -
         <action>\t<id>\t<time>
@@ -282,7 +283,6 @@ class SCAnalysis(object):
         Action format:
         <Merge, split, delete, upload> <change
         """
-        # TODO: timestamp?
         import datetime
         import uuid
         import shutil
@@ -293,9 +293,8 @@ class SCAnalysis(object):
             m_filename = self.m_f + '_' + id
             shutil.copy(self.w_f, w_filename)
             shutil.copy(self.m_f, m_filename)
-        # TODO: change the format
         entry = '{0}\t{1}\t{2}\n'.format(action, id, str(dt))
-        self.log.append((action, id))
+        self.log.append((action, id, str(dt)))
         with open(self.log_f, 'a') as f:
             f.write(entry)
 
@@ -304,12 +303,12 @@ class SCAnalysis(object):
         Restores a previous log entry.
         """
         import shutil
-        # TODO: clear entries afterwards? Or not...
         log_ids = [x[1] for x in self.log]
         try:
-            id_index = log_ids.index(action_id)
-            w_filename = self.w_f + '_' + id
-            m_filename = self.m_f + '_' + id
+            if action_id not in log_ids:
+                return None
+            w_filename = self.w_f + '_' + action_id
+            m_filename = self.m_f + '_' + action_id
             shutil.copy(w_filename, self.w_f)
             shutil.copy(m_filename, self.m_f)
             self.run_post_analysis()
@@ -1287,14 +1286,17 @@ class SCAnalysis(object):
 
 
     def recluster(self, split_or_merge='split',
-            clusters_to_change=[]):
+            clusters_to_change=[], write_log_entry=False):
         """
         Runs split, merge, or new cluster. Updates m and w.
 
         clusters_to_change can be a list of either cluster ids or cell ids.
         split_or_merge is one of 'split', 'merge', 'new', or 'delete'
         """
-        # TODO: copy m and w
+        # TODO: copy m and w - run write_log_entry (saves results before the action)
+        if write_log_entry:
+            action = split_or_merge + ' ' + ','.join(clusters_to_change)
+            self.write_log_entry(action, save_m_w=True)
         data_sampled = self.data_sampled
         if 'init_means' in self.uncurl_kwargs:
             del self.uncurl_kwargs['init_means']
