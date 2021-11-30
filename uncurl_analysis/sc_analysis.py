@@ -267,7 +267,8 @@ class SCAnalysis(object):
             with open(self.log_f) as f:
                 data = f.readlines()
             for l in data:
-                l = (x.strip() for x in l.split('\t'))
+                l = [x.strip() for x in l.split('\t')]
+                l[3] = bool(l[3])
                 self._log.append(l)
         return self._log
 
@@ -285,15 +286,14 @@ class SCAnalysis(object):
         """
         import datetime
         import uuid
-        import shutil
         id = str(uuid.uuid4())
         dt = datetime.datetime.now()
         if save_m_w:
-            w_filename = self.w_f + '_' + id
-            m_filename = self.m_f + '_' + id
-            shutil.copy(self.w_f, w_filename)
-            shutil.copy(self.m_f, m_filename)
-        entry = '{0}\t{1}\t{2}\n'.format(action, id, str(dt))
+            w_filename = self.w_sampled_f + '_' + id
+            m_filename = self.m_sampled_f + '_' + id
+            np.savetxt(w_filename, self.w_sampled)
+            np.savetxt(m_filename, self.m_sampled)
+        entry = '{0}\t{1}\t{2}\t{3}\n'.format(action, id, str(dt), save_m_w)
         self.log.append((action, id, str(dt)))
         with open(self.log_f, 'a') as f:
             f.write(entry)
@@ -306,13 +306,15 @@ class SCAnalysis(object):
         log_ids = [x[1] for x in self.log]
         try:
             if action_id not in log_ids:
+                print('Error: action_id not found')
                 return None
-            w_filename = self.w_f + '_' + action_id
-            m_filename = self.m_f + '_' + action_id
-            shutil.copy(w_filename, self.w_f)
-            shutil.copy(m_filename, self.m_f)
+            w_filename = self.w_sampled_f + '_' + action_id
+            m_filename = self.m_sampled_f + '_' + action_id
+            self._w_sampled = None
+            self._m_sampled = None
+            shutil.copy(w_filename, self.w_sampled_f)
+            shutil.copy(m_filename, self.m_sampled_f)
             self.run_post_analysis()
-            self.save_json_reset()
             return 1
         except:
             print('Error: could not restore previous data')
@@ -1295,7 +1297,7 @@ class SCAnalysis(object):
         """
         # TODO: copy m and w - run write_log_entry (saves results before the action)
         if write_log_entry:
-            action = split_or_merge + ' ' + ','.join(clusters_to_change)
+            action = split_or_merge + ' ' + ','.join([str(x) for x in clusters_to_change])
             self.write_log_entry(action, save_m_w=True)
         data_sampled = self.data_sampled
         if 'init_means' in self.uncurl_kwargs:

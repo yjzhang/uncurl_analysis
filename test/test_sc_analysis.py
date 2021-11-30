@@ -200,6 +200,49 @@ class SCAnalysisTest(TestCase):
         new_cell_count = len(sca.cell_sample)
         self.assertEqual(new_cell_count, old_cell_count - len(cells_to_remove))
 
+    def test_merge_cluster_history(self):
+        """
+        Test merging with history log
+        """
+        sca = sc_analysis.SCAnalysis(self.data_dir,
+                frac=0.2,
+                clusters=8,
+                data_filename='data.mtx',
+                baseline_dim_red='tsvd',
+                dim_red_option='MDS',
+                cell_frac=1.0,
+                max_iters=20,
+                inner_max_iters=10)
+        sca.run_full_analysis()
+        original_labels = sca.labels.copy()
+        # split two clusters....
+        clusters = sca.labels
+        cluster_counts = Counter(clusters)
+        top_cluster, top_count = cluster_counts.most_common()[0]
+        print(cluster_counts)
+        print(top_cluster, top_count)
+        sca.recluster('merge', [0, 1], write_log_entry=True)
+        sca.run_post_analysis()
+        self.assertEqual(sca.params['clusters'], 7)
+        self.assertEqual(sca.w_sampled.shape[0], 7)
+        sca.recluster('split', [0], write_log_entry=True)
+        sca.run_post_analysis()
+        self.assertEqual(sca.params['clusters'], 8)
+        # TODO: check history
+        log = sca.log
+        print(log)
+        self.assertEqual(len(log), 2)
+        entry = log[0]
+        self.assertTrue(entry[3])
+        entry2 = log[1]
+        self.assertTrue(entry2[3])
+        # try to re-load?
+        sca.restore_prev(entry[1])
+        self.assertEqual(sca.params['clusters'], 8)
+        self.assertEqual(sca.w_sampled.shape[0], 8)
+        print(original_labels)
+        print(sca.labels)
+        self.assertTrue((sca.labels == original_labels).all())
 
     def test_gene_names(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
