@@ -304,22 +304,22 @@ class SCAnalysis(object):
         """
         import shutil
         log_ids = [x[1] for x in self.log]
-        try:
-            if action_id not in log_ids:
-                print('Error: action_id not found')
-                return None
-            w_filename = self.w_sampled_f + '_' + action_id
-            m_filename = self.m_sampled_f + '_' + action_id
-            self._w_sampled = None
-            self._m_sampled = None
-            shutil.copy(w_filename, self.w_sampled_f)
-            shutil.copy(m_filename, self.m_sampled_f)
-            self.run_post_analysis()
-            return 1
-        except:
-            print('Error: could not restore previous data')
-            return None
-        
+        if action_id not in log_ids:
+            print('Error: action_id not found')
+            return 'Error: action_id not found'
+        ind = log_ids.index(action_id)
+        entry = self.log[ind]
+        if not entry[3]:
+            print('Error: restore not available for id')
+            return 'Error: restore not available for id'
+        w_filename = self.w_sampled_f + '_' + action_id
+        m_filename = self.m_sampled_f + '_' + action_id
+        self._w_sampled = None
+        self._m_sampled = None
+        shutil.copy(w_filename, self.w_sampled_f)
+        shutil.copy(m_filename, self.m_sampled_f)
+        self.run_post_analysis()
+        return 1
 
     @property
     def data(self):
@@ -1514,6 +1514,8 @@ class SCAnalysis(object):
         if os.path.exists(os.path.join(self.data_dir, 'uncurl_kwargs.json')):
             with open(os.path.join(self.data_dir, 'uncurl_kwargs.json')) as f:
                 uncurl_kwargs = json.load(f)
+                if 'write_progress_file' in uncurl_kwargs:
+                    uncurl_kwargs['write_progress_file'] = os.path.join(self.data_dir, 'progress.txt')
                 self.uncurl_kwargs = uncurl_kwargs
 
     def save_params_json(self):
