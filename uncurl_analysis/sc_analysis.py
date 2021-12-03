@@ -294,7 +294,7 @@ class SCAnalysis(object):
             np.savetxt(w_filename, self.w_sampled)
             np.savetxt(m_filename, self.m_sampled)
         entry = '{0}\t{1}\t{2}\t{3}\n'.format(action, id, str(dt), save_m_w)
-        self.log.append((action, id, str(dt)))
+        self.log.append((action, id, str(dt), save_m_w))
         with open(self.log_f, 'a') as f:
             f.write(entry)
 
