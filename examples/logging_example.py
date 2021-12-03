@@ -36,7 +36,6 @@ print(original_labels)
 original_w = sca.w.copy()
 print(original_w)
 # split two clusters....
-clusters = sca.labels
 sca.recluster('merge', [0, 1], write_log_entry=True)
 sca.run_post_analysis()
 sca.recluster('split', [0], write_log_entry=True)
