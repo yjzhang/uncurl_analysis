@@ -1461,7 +1461,7 @@ class SCAnalysis(object):
             files_to_save = set([])
         else:
             files_to_save = set(files_to_save)
-        files_to_save.update(['data.txt', 'data.txt.gz', 'data.mtx', 'data.mtx.gz', 'init.txt', 'gene_names.txt',
+        files_to_save.update(['data.txt', 'data.txt.gz', 'data.mtx', 'data.mtx.gz', 'init.txt', 'gene_names.txt', 'genes.csv',
             'preprocess.json', 'color_tracks.json', 'vis_summary.html'])
         for key, val in self.color_tracks.items():
             pass

@@ -41,6 +41,10 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path,
             data = scipy.io.mmread(data_path)
         else:
             data = np.loadtxt(data_path)
+        # TODO: infer gene shape/data
+        n_genes = genes.shape[0]
+        if n_genes == data.shape[1]:
+            data = data.T
         data_array += [dataset_name]*data.shape[1]
         all_genes.append(genes)
         if keep_genes or len(genes_set) == 0:
@@ -67,7 +71,7 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path,
         # we assume that all input matrices are of shape (gene, cell)
         if use_batch_correction:
             from .batch_correction import batch_correct_mnn
-            # TODO: use batch effect correction
+            # use batch effect correction
             output_matrix = batch_correct_mnn(all_data)
         else:
             output_matrix = sparse.hstack(all_data)
