@@ -125,6 +125,41 @@ class SCAnalysisTest(TestCase):
         self.assertEqual(len(top_genes_1_vs_rest[0]), sca.data.shape[0])
         self.assertEqual(sca.dim_red.shape[0], 2)
 
+    def test_run_full_analysis_data_subset(self):
+        sca = sc_analysis.SCAnalysis(self.data_dir,
+                clusters=8,
+                frac=0.2,
+                data_filename='data.mtx',
+                baseline_dim_red='umap',
+                dim_red_option='umap',
+                normalize=True,
+                use_fdr=True,
+                min_reads=500,
+                max_reads=2500,
+                cell_frac=0.5,
+                max_iters=20,
+                inner_max_iters=20)
+        print(sca.data.shape)
+        print(sca.cell_subset.shape)
+        print(sca.cell_subset)
+        print(sca.data_subset.shape)
+        self.assertTrue(sca.data_subset.shape[1] <  400)
+        self.assertTrue(sca.data_subset.shape[1] > 200)
+        sca.run_full_analysis()
+        self.assertTrue(sca.has_dim_red)
+        self.assertTrue(sca.has_pvals)
+        self.assertTrue(sca.has_top_genes_1_vs_rest)
+        self.assertTrue(sca.has_top_genes)
+        self.assertTrue(sca.has_baseline_vis)
+        top_genes = sca.top_genes
+        self.assertEqual(len(top_genes), 8)
+        self.assertEqual(len(top_genes[0]), sca.data.shape[0])
+        top_genes_1_vs_rest = sca.top_genes_1_vs_rest
+        self.assertEqual(len(top_genes_1_vs_rest), 8)
+        self.assertEqual(len(top_genes_1_vs_rest[0]), sca.data.shape[0])
+        self.assertEqual(sca.dim_red.shape[0], 2)
+
+
     def test_json(self):
         sca = sc_analysis.SCAnalysis(self.data_dir,
                 frac=0.2,
