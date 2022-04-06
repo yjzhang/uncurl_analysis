@@ -366,7 +366,7 @@ class SCAnalysis(object):
         if self._gene_subset is None:
             if not self.has_gene_subset:
                 t = time.time()
-                data = self.data_normalized[:, self.cell_subset]
+                data = self.data_normalized
                 if 'genes_frac' not in self.params or not isinstance(self.params['genes_frac'], float):
                     self.params['genes_frac'] = 0.2
                 gene_subset = uncurl.max_variance_genes(data, nbins=5,
@@ -431,11 +431,12 @@ class SCAnalysis(object):
     @property
     def data_normalized(self):
         """
-        Data before gene/cell filters, but read count-normalized.
+        Data before gene filters, but after cell subset. Read count-normalized.
         """
         if self._data_normalized is None:
             if self.params['normalize']:
-                self._data_normalized = uncurl.preprocessing.cell_normalize(self.data)
+                data = self.data[:, self.cell_subset]
+                self._data_normalized = uncurl.preprocessing.cell_normalize(data)
             else:
                 self._data_normalized = self.data
         return self._data_normalized
@@ -447,8 +448,7 @@ class SCAnalysis(object):
         """
         if self._data_subset is None:
             data = self.data_normalized
-            data_gene_subset = data[self.gene_subset, :]
-            self._data_subset = data_gene_subset[:, self.cell_subset]
+            self._data_subset = data[self.gene_subset, :]
         return self._data_subset
 
 
@@ -1391,8 +1391,8 @@ class SCAnalysis(object):
         self.entropy
         self.separation_scores
         self.data_sampled_all_genes
-        self.gene_dim_red
-        self.gene_clusters
+        # self.gene_dim_red
+        # self.gene_clusters
 
     def run_post_analysis(self):
         """
