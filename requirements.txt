@@ -6,4 +6,4 @@ requests
 uncurl-seq
 umap-learn
 mnnpy
-git+git://github.com/yjzhang/simplex_sample.git
+git+https://github.com/yjzhang/simplex_sample.git
