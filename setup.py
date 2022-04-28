@@ -28,7 +28,8 @@ install_requires = [
         'pandas',
         'python-igraph',
         'leidenalg',
-        'statsmodels'
+        'statsmodels',
+        'mnnpy'
 ]
 
 setup(
