@@ -1394,6 +1394,28 @@ class SCAnalysis(object):
         # self.gene_dim_red
         # self.gene_clusters
 
+    def run_batch_effect_correction(self, color_track_name):
+        """
+        TODO: run batch effect correction on a given colormap
+        """
+        from .batch_correction import batch_correct_mnn
+        # TODO
+        # 1. take data_normalized, label set and create new sub-matrices..
+        data = self.data_normalized
+        try:
+            colormap, is_discrete = self.get_color_track(color_track_name)
+            if not is_discrete:
+                return None
+            data_list = []
+            # TODO: re-map the indices back
+            indices_list = []
+            for color in np.unique(colormap):
+                data_list.append(data[:, colormap==color])
+                indices_list.append((colormap==color))
+            batch_correct_mnn(data_list)
+        except:
+            print('Error: colormap not found - ' + color_track_name)
+
     def run_post_analysis(self):
         """
         Re-runs the whole analysis except for uncurl - can be used after split/merge.
