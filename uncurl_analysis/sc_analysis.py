@@ -1159,6 +1159,7 @@ class SCAnalysis(object):
         """
         Returns a tuple for a given color track name: data, is_discrete, where
         data is a 1d array, and is_discrete is a boolean.
+        Output should have the same number of cells as cell_sample.
         """
         if color_track_name in self.custom_selections:
             colormap = self.custom_selections[color_track_name]
@@ -1394,27 +1395,45 @@ class SCAnalysis(object):
         # self.gene_dim_red
         # self.gene_clusters
 
-    def run_batch_effect_correction(self, color_track_name):
+    def run_batch_effect_correction(self, color_track_name,
+            write_log_entry=True):
         """
         TODO: run batch effect correction on a given colormap
         """
         from .batch_correction import batch_correct_mnn
         # TODO
+        # 0. log
         # 1. take data_normalized, label set and create new sub-matrices..
         data = self.data_normalized
         try:
             colormap, is_discrete = self.get_color_track(color_track_name)
             if not is_discrete:
+                print('Error: colormap not discrete.')
                 return None
-            data_list = []
-            # TODO: re-map the indices back
-            indices_list = []
-            for color in np.unique(colormap):
-                data_list.append(data[:, colormap==color])
-                indices_list.append((colormap==color))
-            batch_correct_mnn(data_list)
         except:
             print('Error: colormap not found - ' + color_track_name)
+            return None
+        if write_log_entry:
+            action = 'batch'
+            self.write_log_entry(action, save_m_w=True)
+        data_list = []
+        # TODO: re-map the indices back
+        indices_list = []
+        for color in sorted(np.unique(colormap)):
+            data_list.append(data[:, colormap==color])
+            indices_list.append((color, colormap==color))
+        result_data = batch_correct_mnn(data_list)
+        output_data = sparse.csc_matrix(data.shape)
+        end_index = 0
+        for color, indices in indices_list:
+            output_data[:, indices] = result_data[:, end_index:end_index+sum(indices)]
+            end_index += sum(indices)
+        # TODO: save data_normalized
+        self._data_normalized = output_data
+        self._data_sampled = None
+        self.has_data_sampled = False
+        # TODO: delete uncurl results
+        # TODO: do a run_full_analysis
 
     def run_post_analysis(self):
         """
@@ -1486,7 +1505,8 @@ class SCAnalysis(object):
         files_to_save.update(['data.txt', 'data.txt.gz', 'data.mtx', 'data.mtx.gz', 'init.txt', 'gene_names.txt', 'genes.csv',
             'preprocess.json', 'color_tracks.json', 'vis_summary.html'])
         for key, val in self.color_tracks.items():
-            pass
+            filename = os.path.basename(val['color_track_filename'])
+            files_to_save.add(filename)
         # TODO: save uploaded color tracks, delete c
         for filename in os.listdir(self.data_dir):
             if filename not in files_to_save and not filename.startswith('color_track_') and not filename.startswith('diffexp_'):
