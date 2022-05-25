@@ -1401,18 +1401,28 @@ class SCAnalysis(object):
         from .batch_correction import batch_correct_mnn
         # TODO
         # 1. take data_normalized, label set and create new sub-matrices..
-        data = self.data_normalized
+        data = self.data_sampled_all_genes
         try:
             colormap, is_discrete = self.get_color_track(color_track_name)
             if not is_discrete:
                 return None
+            # TODO: label cells
             data_list = []
-            # TODO: re-map the indices back
             indices_list = []
             for color in np.unique(colormap):
                 data_list.append(data[:, colormap==color])
-                indices_list.append((colormap==color))
-            batch_correct_mnn(data_list)
+                indices_list.append((color, colormap==color))
+            result_data = batch_correct_mnn(data_list)
+            # map indices back...
+            data_remapped = result_data.copy()
+            curr_ind = 0
+            for color, indices in indices_list:
+                n_cells = sum(indices)
+                data_remapped[indices] = result_data[:, curr_ind:curr_ind+n_cells]
+                curr_ind += n_cells
+            self._data_normalized = data_remapped
+            # TODO: save output data
+            return data_remapped
         except:
             print('Error: colormap not found - ' + color_track_name)
 
