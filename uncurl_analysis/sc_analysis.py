@@ -1395,12 +1395,11 @@ class SCAnalysis(object):
         # self.gene_clusters
 
     def run_batch_effect_correction(self, color_track_name,
-            write_log_entry=False):
+            write_log_entry=False, save_corrected_data=True):
         """
         TODO: run batch effect correction on a given colormap
         """
         from .batch_correction import batch_correct_mnn
-        # TODO
         # 1. take data_normalized, label set and create new sub-matrices..
         if write_log_entry:
             action = 'batch ' + color_track_name
@@ -1433,16 +1432,17 @@ class SCAnalysis(object):
             data_remapped[:, indices] = result_data[:, curr_ind:curr_ind+n_cells]
             curr_ind += n_cells
         # save output data
+        # TODO: should we do diffexp using the batch corrected data?
         self._data_subset = data_remapped[self.gene_subset, :]
-        self._data_sampled_all_genes = data_remapped
-        sparse_matrix_h5.store_matrix(self._data_sampled_all_genes, self.data_sampled_all_genes_f)
-        print(self.data_subset)
+        if save_corrected_data:
+            self._data_sampled_all_genes = data_remapped
+            sparse_matrix_h5.store_matrix(self._data_sampled_all_genes, self.data_sampled_all_genes_f)
         # re-run post_analysis
         self.run_uncurl()
-        self.run_post_analysis()
+        self.run_post_analysis(run_baseline_vis=save_corrected_data)
         return data_remapped
 
-    def run_post_analysis(self):
+    def run_post_analysis(self, run_baseline_vis=False):
         """
         Re-runs the whole analysis except for uncurl - can be used after split/merge.
 
@@ -1456,9 +1456,10 @@ class SCAnalysis(object):
         self.has_cluster_means = False
         self._cluster_means = None
         self.cluster_means
-        #self.has_baseline_vis = False
-        #self._baseline_vis = None
-        #self.baseline_vis
+        if run_baseline_vis:
+            self.has_baseline_vis = False
+            self._baseline_vis = None
+            self.baseline_vis
         self.has_dim_red = False
         self._dim_red = None
         self.dim_red
