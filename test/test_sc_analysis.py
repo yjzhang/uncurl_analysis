@@ -361,6 +361,26 @@ class SCAnalysisTest(TestCase):
         self.assertEqual(sca.params['clusters'], 8)
         self.assertEqual(sca.w_sampled.shape[0], 8)
 
+    def test_batch_effect_correction(self):
+        sca = sc_analysis.SCAnalysis(self.data_dir,
+                frac=0.2,
+                clusters=8,
+                min_reads=1000,
+                max_reads=10000,
+                data_filename='data.mtx',
+                baseline_dim_red='tsvd',
+                cell_frac=1,
+                max_iters=10,
+                inner_max_iters=20)
+        sca.run_full_analysis()
+        sca.add_color_track('true_labels', self.labs, is_discrete=True)
+        sca.run_batch_effect_correction('true_labels')
+        self.assertEqual(sca.params['clusters'], 8)
+        self.assertEqual(sca.w_sampled.shape[0], 8)
+
+
+
+
 
 if __name__ == '__main__':
     import unittest

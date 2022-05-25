@@ -1394,37 +1394,53 @@ class SCAnalysis(object):
         # self.gene_dim_red
         # self.gene_clusters
 
-    def run_batch_effect_correction(self, color_track_name):
+    def run_batch_effect_correction(self, color_track_name,
+            write_log_entry=False):
         """
         TODO: run batch effect correction on a given colormap
         """
         from .batch_correction import batch_correct_mnn
         # TODO
         # 1. take data_normalized, label set and create new sub-matrices..
+        if write_log_entry:
+            action = 'batch ' + color_track_name
+            self.write_log_entry(action, save_m_w=True)
         data = self.data_sampled_all_genes
         try:
             colormap, is_discrete = self.get_color_track(color_track_name)
-            if not is_discrete:
-                return None
-            # TODO: label cells
-            data_list = []
-            indices_list = []
-            for color in np.unique(colormap):
-                data_list.append(data[:, colormap==color])
-                indices_list.append((color, colormap==color))
-            result_data = batch_correct_mnn(data_list)
-            # map indices back...
-            data_remapped = result_data.copy()
-            curr_ind = 0
-            for color, indices in indices_list:
-                n_cells = sum(indices)
-                data_remapped[indices] = result_data[:, curr_ind:curr_ind+n_cells]
-                curr_ind += n_cells
-            self._data_normalized = data_remapped
-            # TODO: save output data
-            return data_remapped
         except:
             print('Error: colormap not found - ' + color_track_name)
+            return None
+        if not is_discrete:
+            print('Error: colormap is not discrete - ' + color_track_name)
+            return None
+        # label cells
+        data_list = []
+        indices_list = []
+        for color in np.unique(colormap):
+            data_list.append(data[:, colormap==color])
+            indices_list.append((color, colormap==color))
+        result_data = batch_correct_mnn(data_list)
+        # set data to be non-negative ?
+        result_data[result_data < 0] = 0
+        result_data = result_data.astype(np.double)
+        # map indices back...
+        data_remapped = result_data.copy()
+        curr_ind = 0
+        for color, indices in indices_list:
+            n_cells = sum(indices)
+            print(color, curr_ind, n_cells, result_data.shape, data_remapped.shape)
+            data_remapped[:, indices] = result_data[:, curr_ind:curr_ind+n_cells]
+            curr_ind += n_cells
+        # save output data
+        self._data_subset = data_remapped[self.gene_subset, :]
+        self._data_sampled_all_genes = data_remapped
+        sparse_matrix_h5.store_matrix(self._data_sampled_all_genes, self.data_sampled_all_genes_f)
+        print(self.data_subset)
+        # re-run post_analysis
+        self.run_uncurl()
+        self.run_post_analysis()
+        return data_remapped
 
     def run_post_analysis(self):
         """
