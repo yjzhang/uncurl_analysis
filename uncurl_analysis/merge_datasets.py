@@ -23,10 +23,14 @@ def merge_files(data_paths, gene_paths, dataset_names, output_path,
     It also deletes all the temporary files.
     """
     if len(data_paths) == 1 and len(gene_paths) == 1:
-        data_output_path = data_paths[0].replace('_1', '')
+        dirname, data_filename = os.path.split(data_paths[0])
+        data_filename = data_filename.replace('_1', '')
+        data_output_path = os.path.join(dirname, data_filename)
         os.rename(data_paths[0], data_output_path)
         if gene_paths[0] is not None:
-            gene_output_path = gene_paths[0].replace('_1', '')
+            dirname, gene_filename = os.path.split(gene_paths[0])
+            gene_filename = gene_filename.replace('_1', '')
+            gene_output_path = os.path.join(dirname, gene_filename)
             os.rename(gene_paths[0], gene_output_path)
         return data_output_path, gene_output_path
     all_data = []
