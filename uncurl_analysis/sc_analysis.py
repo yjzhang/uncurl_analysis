@@ -721,7 +721,10 @@ class SCAnalysis(object):
                         from uncurl.preprocessing import cell_normalize
                         data_sampled = cell_normalize(data_sampled)
                     tsvd = TruncatedSVD(50)
-                    data_log_norm = uncurl.preprocessing.log1p(data_sampled)
+                    if data_sampled.min() < 0:
+                        data_log_norm = data_sampled
+                    else:
+                        data_log_norm = uncurl.preprocessing.log1p(data_sampled)
                     if baseline_dim_red == 'tsne':
                         data_tsvd = tsvd.fit_transform(data_log_norm.T)
                         tsne = TSNE(2)
